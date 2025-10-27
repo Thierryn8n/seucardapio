@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { WeeklyMenu } from "@/components/WeeklyMenu";
-import { ChevronLeft, ChevronRight, Settings } from "lucide-react";
+import { ChevronLeft, ChevronRight, Settings, Sparkles } from "lucide-react";
 import { startOfWeek, addWeeks, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Link } from "react-router-dom";
@@ -24,21 +24,30 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10 relative overflow-hidden">
+      {/* Decorative gradient orbs */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl opacity-50 animate-pulse" />
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-secondary/10 rounded-full blur-3xl opacity-50 animate-pulse" style={{ animationDelay: "1s" }} />
+      
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm border-b shadow-sm">
+      <header className="sticky top-0 z-10 bg-card/80 backdrop-blur-md border-b shadow-lg animate-fade-in">
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-4xl md:text-5xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Cardápio Semanal
-              </h1>
-              <p className="text-muted-foreground">
-                Confira as refeições planejadas para a semana
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
+                  <Sparkles className="w-6 h-6 text-white" />
+                </div>
+                <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent">
+                  Cardápio Semanal
+                </h1>
+              </div>
+              <p className="text-muted-foreground text-lg ml-15">
+                Refeições deliciosas e balanceadas planejadas com carinho
               </p>
             </div>
             <Link to="/auth">
-              <Button variant="outline" size="sm" className="gap-2">
+              <Button variant="outline" size="sm" className="gap-2 hover:scale-105 transition-transform">
                 <Settings className="w-4 h-4" />
                 Admin
               </Button>
@@ -48,27 +57,27 @@ const Index = () => {
       </header>
 
       {/* Week Navigation */}
-      <div className="sticky top-[88px] z-10 bg-background/95 backdrop-blur-sm border-b py-4 shadow-sm">
+      <div className="sticky top-[120px] z-10 bg-gradient-to-r from-card/90 via-card/95 to-card/90 backdrop-blur-md border-b py-6 shadow-lg animate-fade-in" style={{ animationDelay: "0.1s" }}>
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4 max-w-3xl mx-auto">
             <Button
               variant="outline"
               size="icon"
               onClick={goToPreviousWeek}
-              className="shrink-0"
+              className="shrink-0 hover:scale-110 transition-all hover:bg-primary hover:text-primary-foreground"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-5 w-5" />
             </Button>
 
-            <div className="text-center">
-              <h2 className="text-xl font-semibold text-foreground">
+            <div className="text-center space-y-1">
+              <h2 className="text-2xl font-bold text-foreground">
                 Semana de {format(currentWeekStart, "d 'de' MMMM", { locale: ptBR })}
               </h2>
               <Button
                 variant="link"
                 size="sm"
                 onClick={goToCurrentWeek}
-                className="text-muted-foreground"
+                className="text-muted-foreground hover:text-primary transition-colors"
               >
                 Voltar para semana atual
               </Button>
@@ -78,18 +87,27 @@ const Index = () => {
               variant="outline"
               size="icon"
               onClick={goToNextWeek}
-              className="shrink-0"
+              className="shrink-0 hover:scale-110 transition-all hover:bg-primary hover:text-primary-foreground"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-5 w-5" />
             </Button>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <main className="container mx-auto px-4 py-8">
-        <WeeklyMenu weekStartDate={currentWeekStart} />
+      <main className="container mx-auto px-4 py-12 relative z-0">
+        <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
+          <WeeklyMenu weekStartDate={currentWeekStart} />
+        </div>
       </main>
+      
+      {/* Footer */}
+      <footer className="border-t bg-card/50 backdrop-blur-sm py-8 mt-16">
+        <div className="container mx-auto px-4 text-center text-muted-foreground">
+          <p>Feito com ❤️ para você ter sempre as melhores refeições</p>
+        </div>
+      </footer>
     </div>
   );
 };
