@@ -6,10 +6,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Trash2, Plus } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Plus, Download, Link2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -89,6 +90,56 @@ const AdminMenus = () => {
     },
   });
 
+  const exportToCSV = () => {
+    if (!menus || menus.length === 0) {
+      toast({
+        title: "Nenhum dado para exportar",
+        description: "Adicione cardápios antes de exportar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const headers = ["Semana", "Dia", "Refeição", "Nome do Prato", "Descrição", "Link da Imagem"];
+    const rows = menus.map(menu => [
+      format(new Date(menu.week_start_date), "dd/MM/yyyy"),
+      weekDays[menu.day_of_week],
+      mealLabels[menu.meal_number - 1],
+      menu.meal_name,
+      menu.description || "",
+      menu.image_url || ""
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `cardapios_${format(new Date(), "yyyy-MM-dd")}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Exportação concluída",
+      description: "Arquivo CSV baixado com sucesso.",
+    });
+  };
+
+  const copyPublicLink = () => {
+    const publicLink = `${window.location.origin}/menu/public`;
+    navigator.clipboard.writeText(publicLink);
+    toast({
+      title: "Link copiado!",
+      description: "O link público foi copiado para a área de transferência.",
+    });
+  };
+
   if (loading || menusLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -103,22 +154,44 @@ const AdminMenus = () => {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Link to="/admin">
-              <Button variant="ghost" size="sm" className="gap-2">
-                <ArrowLeft className="w-4 h-4" />
-                Voltar
-              </Button>
-            </Link>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold">Gerenciar Cardápios</h1>
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-4">
+              <Link to="/admin">
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <ArrowLeft className="w-4 h-4" />
+                  Voltar
+                </Button>
+              </Link>
+              <div className="flex-1">
+                <h1 className="text-2xl font-bold">Gerenciar Cardápios</h1>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={copyPublicLink} className="gap-2">
+                  <Link2 className="w-4 h-4" />
+                  Copiar Link Público
+                </Button>
+                <Button variant="outline" onClick={exportToCSV} className="gap-2">
+                  <Download className="w-4 h-4" />
+                  Exportar CSV
+                </Button>
+                <Link to="/admin/menus/new">
+                  <Button className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    Novo Cardápio
+                  </Button>
+                </Link>
+              </div>
             </div>
-            <Link to="/admin/menus/new">
-              <Button className="gap-2">
-                <Plus className="w-4 h-4" />
-                Novo Cardápio
-              </Button>
-            </Link>
+            <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+              <Link2 className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span className="text-sm text-muted-foreground">Link público:</span>
+              <Input 
+                readOnly 
+                value={`${window.location.origin}/menu/public`}
+                className="flex-1 h-8 text-xs bg-background"
+                onClick={(e) => e.currentTarget.select()}
+              />
+            </div>
           </div>
         </div>
       </header>

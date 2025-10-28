@@ -2,12 +2,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { WeeklyMenu } from "@/components/WeeklyMenu";
 import { useSettings } from "@/hooks/useSettings";
-import { ChevronLeft, ChevronRight, Settings, Sparkles, Heart } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles, Heart } from "lucide-react";
 import { startOfWeek, addWeeks, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
-const Index = () => {
+const Menu = () => {
+  const { id } = useParams();
   const { settings } = useSettings();
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
     return startOfWeek(new Date(), { weekStartsOn: 0 });
@@ -34,26 +35,29 @@ const Index = () => {
       {/* Header */}
       <header className="sticky top-0 z-10 bg-card/80 backdrop-blur-md border-b shadow-lg animate-fade-in">
         <div className="container mx-auto px-4 py-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
-                  <Sparkles className="w-6 h-6 text-white" />
-                </div>
+          <div className="flex flex-col md:flex-row md:items-center justify-center gap-4">
+            <div className="text-center space-y-2">
+              <div className="flex items-center justify-center gap-3">
+                {settings?.logo_url && (
+                  <img 
+                    src={settings.logo_url} 
+                    alt="Logo" 
+                    className="w-12 h-12 object-contain"
+                  />
+                )}
+                {!settings?.logo_url && (
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
+                    <Sparkles className="w-6 h-6 text-white" />
+                  </div>
+                )}
                 <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent">
                   Cardápio Semanal
                 </h1>
               </div>
-              <p className="text-muted-foreground text-lg ml-15">
+              <p className="text-muted-foreground text-lg">
                 Refeições deliciosas e balanceadas planejadas com carinho
               </p>
             </div>
-            <Link to="/auth">
-              <Button variant="outline" size="sm" className="gap-2 hover:scale-105 transition-transform">
-                <Settings className="w-4 h-4" />
-                Admin
-              </Button>
-            </Link>
           </div>
         </div>
       </header>
@@ -131,4 +135,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default Menu;
