@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogOut, Calendar, Plus, List } from "lucide-react";
+import { LogOut, Calendar, Plus, List, Settings } from "lucide-react";
 
 const Admin = () => {
   const { user, signOut, isAdmin, loading } = useAuth();
@@ -54,7 +54,7 @@ const Admin = () => {
           </Card>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Link to="/">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
               <CardHeader>
@@ -86,6 +86,18 @@ const Admin = () => {
                 <CardTitle>Novo Cardápio</CardTitle>
                 <CardDescription>
                   Adicione um novo item ao cardápio semanal
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
+          <Link to={isAdmin ? "/admin/settings" : "#"} className={!isAdmin ? "pointer-events-none opacity-50" : ""}>
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+              <CardHeader>
+                <Settings className="w-8 h-8 mb-2 text-primary" />
+                <CardTitle>Configurações</CardTitle>
+                <CardDescription>
+                  Personalize cores, fontes, dias da semana e mais
                 </CardDescription>
               </CardHeader>
             </Card>

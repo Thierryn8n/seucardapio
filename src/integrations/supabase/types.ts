@@ -74,6 +74,78 @@ export type Database = {
         }
         Relationships: []
       }
+      settings: {
+        Row: {
+          accent_color: string
+          body_font: string
+          company_name: string
+          created_at: string
+          donation_enabled: boolean
+          donation_text: string
+          donation_url: string | null
+          favicon_url: string | null
+          id: string
+          logo_url: string | null
+          primary_color: string
+          secondary_color: string
+          show_friday: boolean
+          show_monday: boolean
+          show_saturday: boolean
+          show_sunday: boolean
+          show_thursday: boolean
+          show_tuesday: boolean
+          show_wednesday: boolean
+          title_font: string
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string
+          body_font?: string
+          company_name?: string
+          created_at?: string
+          donation_enabled?: boolean
+          donation_text?: string
+          donation_url?: string | null
+          favicon_url?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string
+          secondary_color?: string
+          show_friday?: boolean
+          show_monday?: boolean
+          show_saturday?: boolean
+          show_sunday?: boolean
+          show_thursday?: boolean
+          show_tuesday?: boolean
+          show_wednesday?: boolean
+          title_font?: string
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string
+          body_font?: string
+          company_name?: string
+          created_at?: string
+          donation_enabled?: boolean
+          donation_text?: string
+          donation_url?: string | null
+          favicon_url?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string
+          secondary_color?: string
+          show_friday?: boolean
+          show_monday?: boolean
+          show_saturday?: boolean
+          show_sunday?: boolean
+          show_thursday?: boolean
+          show_tuesday?: boolean
+          show_wednesday?: boolean
+          title_font?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

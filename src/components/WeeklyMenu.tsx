@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useSettings } from "@/hooks/useSettings";
 import { MealCard } from "./MealCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { startOfWeek, addDays, format } from "date-fns";
@@ -22,6 +23,7 @@ interface WeeklyMenuProps {
 const weekDays = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
 export const WeeklyMenu = ({ weekStartDate }: WeeklyMenuProps) => {
+  const { settings } = useSettings();
   const { data: menus, isLoading } = useQuery({
     queryKey: ["menus", weekStartDate.toISOString()],
     queryFn: async () => {
@@ -65,9 +67,22 @@ export const WeeklyMenu = ({ weekStartDate }: WeeklyMenuProps) => {
     return acc;
   }, {} as Record<number, Menu[]>) || {};
 
+  // Filter days based on settings
+  const activeDays = settings
+    ? [
+        settings.show_sunday ? 0 : -1,
+        settings.show_monday ? 1 : -1,
+        settings.show_tuesday ? 2 : -1,
+        settings.show_wednesday ? 3 : -1,
+        settings.show_thursday ? 4 : -1,
+        settings.show_friday ? 5 : -1,
+        settings.show_saturday ? 6 : -1,
+      ].filter((day) => day !== -1)
+    : [0, 1, 2, 3, 4, 5, 6];
+
   return (
     <div className="space-y-10">
-      {[0, 1, 2, 3, 4, 5, 6].map((dayIndex) => {
+      {activeDays.map((dayIndex) => {
         const currentDate = addDays(weekStartDate, dayIndex);
         const dayMenus = menusByDay[dayIndex] || [];
 

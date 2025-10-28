@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { WeeklyMenu } from "@/components/WeeklyMenu";
-import { ChevronLeft, ChevronRight, Settings, Sparkles } from "lucide-react";
+import { useSettings } from "@/hooks/useSettings";
+import { ChevronLeft, ChevronRight, Settings, Sparkles, Heart } from "lucide-react";
 import { startOfWeek, addWeeks, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Link } from "react-router-dom";
 
 const Index = () => {
+  const { settings } = useSettings();
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
     return startOfWeek(new Date(), { weekStartsOn: 0 });
   });
@@ -104,8 +106,25 @@ const Index = () => {
       
       {/* Footer */}
       <footer className="border-t bg-card/50 backdrop-blur-sm py-8 mt-16">
-        <div className="container mx-auto px-4 text-center text-muted-foreground">
-          <p>Feito com ❤️ para você ter sempre as melhores refeições</p>
+        <div className="container mx-auto px-4 text-center space-y-6">
+          {settings?.donation_enabled && settings?.donation_url && (
+            <div className="mb-6">
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="group hover:bg-accent hover:text-accent-foreground transition-all"
+              >
+                <a href={settings.donation_url} target="_blank" rel="noopener noreferrer">
+                  <Heart className="mr-2 h-5 w-5 group-hover:fill-current transition-all" />
+                  {settings.donation_text}
+                </a>
+              </Button>
+            </div>
+          )}
+          <p className="text-muted-foreground">
+            Feito com ❤️ para {settings?.company_name || "você ter sempre as melhores refeições"}
+          </p>
         </div>
       </footer>
     </div>

@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import AdminMenus from "./pages/AdminMenus";
 import AdminMenuForm from "./pages/AdminMenuForm";
+import AdminSettings from "./pages/AdminSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="/admin/menus" element={<AdminMenus />} />
             <Route path="/admin/menus/new" element={<AdminMenuForm />} />
             <Route path="/admin/menus/:id" element={<AdminMenuForm />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
