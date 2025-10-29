@@ -9,9 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Upload, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ArrowLeft, Upload, X, Image as ImageIcon, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { format, startOfWeek } from "date-fns";
 
 const mealLabels = ["Café da Manhã", "Almoço", "Lanche", "Jantar"];
 const weekDays = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
@@ -32,6 +32,8 @@ const AdminMenuForm = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [existingImageUrl, setExistingImageUrl] = useState<string>("");
   const [uploading, setUploading] = useState(false);
+  const [showGallery, setShowGallery] = useState(false);
+  const [showMenus, setShowMenus] = useState(false);
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
@@ -55,6 +57,41 @@ const AdminMenuForm = () => {
     enabled: isEdit && !!user && isAdmin,
   });
 
+  const { data: galleryImages } = useQuery({
+    queryKey: ["gallery-images", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      
+      const { data: menus } = await supabase
+        .from("menus")
+        .select("image_url")
+        .eq("user_id", user.id)
+        .not("image_url", "is", null);
+      
+      const uniqueImages = Array.from(new Set(menus?.map(m => m.image_url).filter(Boolean)));
+      return uniqueImages;
+    },
+    enabled: !!user?.id,
+  });
+
+  const { data: existingMenus } = useQuery({
+    queryKey: ["existing-menus", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      
+      const { data, error } = await supabase
+        .from("menus")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id && !isEdit,
+  });
+
   useEffect(() => {
     if (menu) {
       setWeekStartDate(menu.week_start_date);
@@ -65,6 +102,19 @@ const AdminMenuForm = () => {
       setExistingImageUrl(menu.image_url || "");
     }
   }, [menu]);
+
+  const loadMenuTemplate = (templateMenu: any) => {
+    setDayOfWeek(templateMenu.day_of_week.toString());
+    setMealNumber(templateMenu.meal_number.toString());
+    setMealName(templateMenu.meal_name);
+    setDescription(templateMenu.description || "");
+    setExistingImageUrl(templateMenu.image_url || "");
+    setShowMenus(false);
+    toast({
+      title: "Template carregado",
+      description: "Dados do menu foram copiados. Ajuste conforme necessário.",
+    });
+  };
 
   const uploadImage = async (file: File) => {
     const fileExt = file.name.split('.').pop();
@@ -167,7 +217,47 @@ const AdminMenuForm = () => {
       <main className="container mx-auto px-4 py-8 max-w-2xl">
         <Card>
           <CardHeader>
-            <CardTitle>{isEdit ? "Editar Cardápio" : "Novo Cardápio"}</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>{isEdit ? "Editar Cardápio" : "Novo Cardápio"}</CardTitle>
+              {!isEdit && (
+                <Dialog open={showMenus} onOpenChange={setShowMenus}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <Copy className="w-4 h-4" />
+                      Usar Template
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Selecionar Menu Existente</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-4">
+                      {existingMenus?.map((menu) => (
+                        <Card
+                          key={menu.id}
+                          className="cursor-pointer hover:border-primary transition-colors"
+                          onClick={() => loadMenuTemplate(menu)}
+                        >
+                          {menu.image_url && (
+                            <img
+                              src={menu.image_url}
+                              alt={menu.meal_name}
+                              className="w-full h-32 object-cover rounded-t-lg"
+                            />
+                          )}
+                          <CardContent className="p-4">
+                            <p className="font-semibold">{menu.meal_name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {weekDays[menu.day_of_week]} - {mealLabels[menu.meal_number - 1]}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={(e) => saveMutation.mutate(e)} className="space-y-6">
@@ -240,7 +330,42 @@ const AdminMenuForm = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="image">Imagem do Prato (opcional)</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="image">Imagem do Prato (opcional)</Label>
+                  <Dialog open={showGallery} onOpenChange={setShowGallery}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm" type="button" className="gap-2">
+                        <ImageIcon className="w-4 h-4" />
+                        Galeria
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>Selecionar da Galeria</DialogTitle>
+                      </DialogHeader>
+                      <div className="grid grid-cols-3 gap-4">
+                        {galleryImages?.map((imageUrl, index) => (
+                          <Card
+                            key={index}
+                            className="cursor-pointer hover:border-primary transition-colors overflow-hidden"
+                            onClick={() => {
+                              setExistingImageUrl(imageUrl);
+                              setImageFile(null);
+                              setShowGallery(false);
+                            }}
+                          >
+                            <img
+                              src={imageUrl}
+                              alt={`Gallery ${index}`}
+                              className="w-full h-32 object-cover"
+                            />
+                          </Card>
+                        ))}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+                
                 {existingImageUrl && !imageFile && (
                   <div className="relative">
                     <img

@@ -11,6 +11,7 @@ import Admin from "./pages/Admin";
 import AdminMenus from "./pages/AdminMenus";
 import AdminMenuForm from "./pages/AdminMenuForm";
 import AdminSettings from "./pages/AdminSettings";
+import AdminGallery from "./pages/AdminGallery";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,11 +27,12 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/:id/cardapio" element={<Menu />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/admin/menus" element={<AdminMenus />} />
-            <Route path="/admin/menus/new" element={<AdminMenuForm />} />
-            <Route path="/admin/menus/:id" element={<AdminMenuForm />} />
-            <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/admin/menus" element={<AdminMenus />} />
+          <Route path="/admin/menus/new" element={<AdminMenuForm />} />
+          <Route path="/admin/menus/:id" element={<AdminMenuForm />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin/gallery" element={<AdminGallery />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

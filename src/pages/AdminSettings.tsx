@@ -173,7 +173,7 @@ export default function AdminSettings() {
                     <img
                       src={settings.logo_url}
                       alt="Logo"
-                      className="mt-2 h-16 object-contain"
+                      className="mt-2 w-full h-auto object-contain"
                     />
                   )}
                 </div>
