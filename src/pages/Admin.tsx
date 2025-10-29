@@ -55,7 +55,7 @@ const Admin = () => {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Link to="/">
+          <Link to={`/${user?.id}/cardapio`}>
             <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
               <CardHeader>
                 <Calendar className="w-8 h-8 mb-2 text-primary" />
