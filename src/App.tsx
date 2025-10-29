@@ -24,7 +24,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/" element={<Landing />} />
-            <Route path="/menu/:id" element={<Menu />} />
+            <Route path="/:id/cardapio" element={<Menu />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/admin/menus" element={<AdminMenus />} />

@@ -104,7 +104,7 @@ const Menu = () => {
       {/* Content */}
       <main className="container mx-auto px-4 py-12 relative z-0">
         <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
-          <WeeklyMenu weekStartDate={currentWeekStart} />
+          <WeeklyMenu weekStartDate={currentWeekStart} userId={id} />
         </div>
       </main>
       

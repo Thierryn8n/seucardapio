@@ -102,6 +102,7 @@ const AdminMenuForm = () => {
         meal_name: mealName,
         description: description || null,
         image_url: imageUrl || null,
+        user_id: user?.id,
       };
 
       if (isEdit) {

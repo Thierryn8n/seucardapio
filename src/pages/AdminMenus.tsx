@@ -49,11 +49,12 @@ const AdminMenus = () => {
   }, [user, isAdmin, loading, navigate]);
 
   const { data: menus, isLoading: menusLoading } = useQuery({
-    queryKey: ["admin-menus"],
+    queryKey: ["admin-menus", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("menus")
         .select("*")
+        .eq("user_id", user?.id)
         .order("week_start_date", { ascending: false })
         .order("day_of_week")
         .order("meal_number");
@@ -132,7 +133,7 @@ const AdminMenus = () => {
   };
 
   const copyPublicLink = () => {
-    const publicLink = `${window.location.origin}/menu/public`;
+    const publicLink = `${window.location.origin}/${user?.id}/cardapio`;
     navigator.clipboard.writeText(publicLink);
     toast({
       title: "Link copiado!",
@@ -187,7 +188,7 @@ const AdminMenus = () => {
               <span className="text-sm text-muted-foreground">Link público:</span>
               <Input 
                 readOnly 
-                value={`${window.location.origin}/menu/public`}
+                value={`${window.location.origin}/${user?.id}/cardapio`}
                 className="flex-1 h-8 text-xs bg-background"
                 onClick={(e) => e.currentTarget.select()}
               />

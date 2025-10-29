@@ -18,19 +18,26 @@ interface Menu {
 
 interface WeeklyMenuProps {
   weekStartDate: Date;
+  userId?: string;
 }
 
 const weekDays = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
-export const WeeklyMenu = ({ weekStartDate }: WeeklyMenuProps) => {
+export const WeeklyMenu = ({ weekStartDate, userId }: WeeklyMenuProps) => {
   const { settings } = useSettings();
   const { data: menus, isLoading } = useQuery({
-    queryKey: ["menus", weekStartDate.toISOString()],
+    queryKey: ["menus", weekStartDate.toISOString(), userId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("menus")
         .select("*")
-        .eq("week_start_date", format(weekStartDate, "yyyy-MM-dd"))
+        .eq("week_start_date", format(weekStartDate, "yyyy-MM-dd"));
+      
+      if (userId) {
+        query = query.eq("user_id", userId);
+      }
+      
+      const { data, error } = await query
         .order("day_of_week")
         .order("meal_number");
 
