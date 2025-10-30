@@ -210,42 +210,123 @@ export default function AdminSettings() {
                 Cores do Sistema
               </CardTitle>
               <CardDescription>
-                Personalize as cores do tema (formato: H S% L%)
+                Personalize as cores do tema com seletores visuais
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid md:grid-cols-3 gap-4">
-                <div>
+            <CardContent className="space-y-6">
+              <div className="grid md:grid-cols-3 gap-6">
+                <div className="space-y-2">
                   <Label htmlFor="primary_color">Cor Primária</Label>
-                  <Input
-                    id="primary_color"
-                    value={formData.primary_color}
-                    onChange={(e) =>
-                      setFormData({ ...formData, primary_color: e.target.value })
-                    }
-                    placeholder="20 85% 55%"
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="color"
+                      value={`#${formData.primary_color.split(' ').map((v, i) => {
+                        const num = parseFloat(v.replace('%', ''));
+                        if (i === 0) return Math.round(num * 255 / 360).toString(16).padStart(2, '0');
+                        if (i === 1) return Math.round(num * 255 / 100).toString(16).padStart(2, '0');
+                        return Math.round(num * 255 / 100).toString(16).padStart(2, '0');
+                      }).join('')}`}
+                      onChange={(e) => {
+                        const hex = e.target.value.replace('#', '');
+                        const r = parseInt(hex.substr(0, 2), 16);
+                        const g = parseInt(hex.substr(2, 2), 16);
+                        const b = parseInt(hex.substr(4, 2), 16);
+                        const h = Math.round(Math.atan2(Math.sqrt(3) * (g - b), 2 * r - g - b) * 180 / Math.PI);
+                        const s = Math.round(Math.sqrt(3) * Math.abs(g - b) / (r + g + b) * 100);
+                        const l = Math.round((r + g + b) / 7.65);
+                        setFormData({ ...formData, primary_color: `${h} ${s}% ${l}%` });
+                      }}
+                      className="w-16 h-10 rounded border cursor-pointer"
+                    />
+                    <Input
+                      id="primary_color"
+                      value={formData.primary_color}
+                      onChange={(e) =>
+                        setFormData({ ...formData, primary_color: e.target.value })
+                      }
+                      placeholder="20 85% 55%"
+                      className="flex-1"
+                    />
+                  </div>
+                  <div 
+                    className="w-full h-12 rounded-lg border shadow-sm"
+                    style={{ backgroundColor: `hsl(${formData.primary_color})` }}
                   />
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="secondary_color">Cor Secundária</Label>
-                  <Input
-                    id="secondary_color"
-                    value={formData.secondary_color}
-                    onChange={(e) =>
-                      setFormData({ ...formData, secondary_color: e.target.value })
-                    }
-                    placeholder="140 45% 50%"
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="color"
+                      value={`#${formData.secondary_color.split(' ').map((v, i) => {
+                        const num = parseFloat(v.replace('%', ''));
+                        if (i === 0) return Math.round(num * 255 / 360).toString(16).padStart(2, '0');
+                        if (i === 1) return Math.round(num * 255 / 100).toString(16).padStart(2, '0');
+                        return Math.round(num * 255 / 100).toString(16).padStart(2, '0');
+                      }).join('')}`}
+                      onChange={(e) => {
+                        const hex = e.target.value.replace('#', '');
+                        const r = parseInt(hex.substr(0, 2), 16);
+                        const g = parseInt(hex.substr(2, 2), 16);
+                        const b = parseInt(hex.substr(4, 2), 16);
+                        const h = Math.round(Math.atan2(Math.sqrt(3) * (g - b), 2 * r - g - b) * 180 / Math.PI);
+                        const s = Math.round(Math.sqrt(3) * Math.abs(g - b) / (r + g + b) * 100);
+                        const l = Math.round((r + g + b) / 7.65);
+                        setFormData({ ...formData, secondary_color: `${h} ${s}% ${l}%` });
+                      }}
+                      className="w-16 h-10 rounded border cursor-pointer"
+                    />
+                    <Input
+                      id="secondary_color"
+                      value={formData.secondary_color}
+                      onChange={(e) =>
+                        setFormData({ ...formData, secondary_color: e.target.value })
+                      }
+                      placeholder="140 45% 50%"
+                      className="flex-1"
+                    />
+                  </div>
+                  <div 
+                    className="w-full h-12 rounded-lg border shadow-sm"
+                    style={{ backgroundColor: `hsl(${formData.secondary_color})` }}
                   />
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="accent_color">Cor de Destaque</Label>
-                  <Input
-                    id="accent_color"
-                    value={formData.accent_color}
-                    onChange={(e) =>
-                      setFormData({ ...formData, accent_color: e.target.value })
-                    }
-                    placeholder="15 90% 60%"
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="color"
+                      value={`#${formData.accent_color.split(' ').map((v, i) => {
+                        const num = parseFloat(v.replace('%', ''));
+                        if (i === 0) return Math.round(num * 255 / 360).toString(16).padStart(2, '0');
+                        if (i === 1) return Math.round(num * 255 / 100).toString(16).padStart(2, '0');
+                        return Math.round(num * 255 / 100).toString(16).padStart(2, '0');
+                      }).join('')}`}
+                      onChange={(e) => {
+                        const hex = e.target.value.replace('#', '');
+                        const r = parseInt(hex.substr(0, 2), 16);
+                        const g = parseInt(hex.substr(2, 2), 16);
+                        const b = parseInt(hex.substr(4, 2), 16);
+                        const h = Math.round(Math.atan2(Math.sqrt(3) * (g - b), 2 * r - g - b) * 180 / Math.PI);
+                        const s = Math.round(Math.sqrt(3) * Math.abs(g - b) / (r + g + b) * 100);
+                        const l = Math.round((r + g + b) / 7.65);
+                        setFormData({ ...formData, accent_color: `${h} ${s}% ${l}%` });
+                      }}
+                      className="w-16 h-10 rounded border cursor-pointer"
+                    />
+                    <Input
+                      id="accent_color"
+                      value={formData.accent_color}
+                      onChange={(e) =>
+                        setFormData({ ...formData, accent_color: e.target.value })
+                      }
+                      placeholder="15 90% 60%"
+                      className="flex-1"
+                    />
+                  </div>
+                  <div 
+                    className="w-full h-12 rounded-lg border shadow-sm"
+                    style={{ backgroundColor: `hsl(${formData.accent_color})` }}
                   />
                 </div>
               </div>

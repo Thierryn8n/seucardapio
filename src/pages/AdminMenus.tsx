@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Trash2, Plus, Download, Link2, Copy, Image, Upload } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Plus, Download, Link2, Copy, Image, Upload, Camera, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -21,6 +21,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Menu {
   id: string;
@@ -42,6 +49,9 @@ const AdminMenus = () => {
   const queryClient = useQueryClient();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [showTranscribeDialog, setShowTranscribeDialog] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
@@ -225,6 +235,70 @@ const AdminMenus = () => {
     }
   };
 
+  const handleTranscribeImage = async (file: File) => {
+    if (!user?.id) return;
+    
+    setTranscribing(true);
+    
+    try {
+      // Convert image to base64
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      
+      await new Promise((resolve) => {
+        reader.onload = resolve;
+      });
+      
+      const imageBase64 = reader.result as string;
+      setImagePreview(imageBase64);
+
+      // Call edge function to transcribe
+      const { data, error } = await supabase.functions.invoke('transcribe-menu', {
+        body: { imageBase64 }
+      });
+
+      if (error) throw error;
+
+      if (!data || !data.weekStartDate || !data.menus) {
+        throw new Error('Dados inválidos retornados pela IA');
+      }
+
+      // Insert menus into database
+      const menusToInsert = data.menus.map((menu: any) => ({
+        user_id: user.id,
+        week_start_date: data.weekStartDate,
+        day_of_week: menu.dayOfWeek,
+        meal_number: menu.mealNumber,
+        meal_name: menu.mealName,
+        description: menu.description || null,
+        image_url: null,
+      }));
+
+      const { error: insertError } = await supabase.from("menus").insert(menusToInsert);
+      
+      if (insertError) throw insertError;
+
+      queryClient.invalidateQueries({ queryKey: ["admin-menus"] });
+      
+      toast({
+        title: "Cardápio transcrito com sucesso!",
+        description: `${menusToInsert.length} refeições foram adicionadas.`,
+      });
+      
+      setShowTranscribeDialog(false);
+      setImagePreview(null);
+    } catch (error: any) {
+      console.error("Error transcribing image:", error);
+      toast({
+        title: "Erro ao transcrever",
+        description: error.message || "Não foi possível processar a imagem. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setTranscribing(false);
+    }
+  };
+
   if (loading || menusLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -251,6 +325,15 @@ const AdminMenus = () => {
                 <h1 className="text-2xl font-bold">Gerenciar Cardápios</h1>
               </div>
               <div className="flex gap-2 flex-wrap">
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setShowTranscribeDialog(true)}
+                  className="gap-2 bg-gradient-to-r from-primary to-accent"
+                >
+                  <Camera className="w-4 h-4" />
+                  Transcrever Foto
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -423,6 +506,97 @@ const AdminMenus = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={showTranscribeDialog} onOpenChange={setShowTranscribeDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Camera className="w-5 h-5" />
+              Transcrever Cardápio de Foto
+            </DialogTitle>
+            <DialogDescription>
+              Tire uma foto ou selecione uma imagem do cardápio escrito à mão. A IA irá transcrever automaticamente todas as refeições, dias da semana e descrições.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {imagePreview && (
+              <div className="rounded-lg overflow-hidden border">
+                <img src={imagePreview} alt="Preview" className="w-full h-auto" />
+              </div>
+            )}
+            
+            {!transcribing ? (
+              <div className="grid grid-cols-2 gap-4">
+                <label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleTranscribeImage(file);
+                    }}
+                  />
+                  <Button 
+                    variant="outline" 
+                    className="w-full gap-2"
+                    onClick={() => {
+                      const input = document.querySelector<HTMLInputElement>('input[accept="image/*"][capture="environment"]');
+                      input?.click();
+                    }}
+                  >
+                    <Camera className="w-4 h-4" />
+                    Tirar Foto
+                  </Button>
+                </label>
+                
+                <label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleTranscribeImage(file);
+                    }}
+                  />
+                  <Button 
+                    variant="outline" 
+                    className="w-full gap-2"
+                    onClick={() => {
+                      const input = document.querySelectorAll<HTMLInputElement>('input[accept="image/*"]')[1];
+                      input?.click();
+                    }}
+                  >
+                    <Image className="w-4 h-4" />
+                    Escolher da Galeria
+                  </Button>
+                </label>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                <Loader2 className="w-12 h-12 animate-spin text-primary" />
+                <p className="text-muted-foreground text-center">
+                  Analisando imagem e transcrevendo cardápio...<br />
+                  <span className="text-xs">Isso pode levar alguns segundos</span>
+                </p>
+              </div>
+            )}
+
+            <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+              <p className="text-sm font-medium">💡 Dicas para melhor resultado:</p>
+              <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                <li>Certifique-se de que o texto está legível e bem iluminado</li>
+                <li>Evite sombras e reflexos na imagem</li>
+                <li>Tire a foto de forma que todo o cardápio esteja visível</li>
+                <li>A IA reconhece dias da semana, refeições e descrições automaticamente</li>
+              </ul>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

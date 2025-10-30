@@ -55,7 +55,13 @@ const Menu = () => {
     if (!element) return;
 
     try {
-      const canvas = await html2canvas(element);
+      const canvas = await html2canvas(element, {
+        useCORS: true,
+        allowTaint: true,
+        scale: 2,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
       const link = document.createElement("a");
       link.download = `cardapio-${format(currentWeekStart, "dd-MM-yyyy")}.png`;
       link.href = canvas.toDataURL();
@@ -71,7 +77,13 @@ const Menu = () => {
     if (!element) return;
 
     try {
-      const canvas = await html2canvas(element);
+      const canvas = await html2canvas(element, {
+        useCORS: true,
+        allowTaint: true,
+        scale: 2,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF("p", "mm", "a4");
       const imgWidth = 210;
@@ -161,20 +173,20 @@ const Menu = () => {
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row md:items-center justify-center gap-4">
             <div className="text-center space-y-2">
-              <div className="flex items-center justify-center gap-3">
+              <div className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-4">
                 {settings?.logo_url && (
                   <img 
                     src={settings.logo_url} 
                     alt="Logo" 
-                    className="w-12 h-12 object-contain"
+                    className="w-24 h-24 md:w-36 md:h-36 object-contain"
                   />
                 )}
                 {!settings?.logo_url && (
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
-                    <Sparkles className="w-6 h-6 text-white" />
+                  <div className="w-24 h-24 md:w-36 md:h-36 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
+                    <Sparkles className="w-12 h-12 md:w-18 md:h-18 text-white" />
                   </div>
                 )}
-                <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent">
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent text-center">
                   Cardápio Semanal
                 </h1>
               </div>
