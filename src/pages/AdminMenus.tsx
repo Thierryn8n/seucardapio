@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Trash2, Plus, Download, Link2, Copy, Image, Upload, Share2 } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Plus, Download, Link2, Copy, Image, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -225,41 +225,6 @@ const AdminMenus = () => {
     }
   };
 
-  const exportMenusAsText = (weekStart?: string) => {
-    const menusToExport = weekStart 
-      ? menus?.filter(m => m.week_start_date === weekStart)
-      : menus;
-    
-    const text = menusToExport?.map(m => 
-      `${mealLabels[m.meal_number - 1]} - ${weekDays[m.day_of_week]}\n${m.meal_name}\n${m.description || ""}\n\n`
-    ).join("");
-    
-    const blob = new Blob([text || ""], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `cardapio_${weekStart || "todos"}.txt`;
-    a.click();
-    
-    toast({
-      title: "Arquivo baixado",
-      description: "Cardápio exportado como TXT.",
-    });
-  };
-
-  const shareWhatsApp = (weekStart?: string) => {
-    const menusToShare = weekStart 
-      ? menus?.filter(m => m.week_start_date === weekStart)
-      : menus;
-    
-    const text = menusToShare?.map(m => 
-      `*${mealLabels[m.meal_number - 1]} - ${weekDays[m.day_of_week]}*\n${m.meal_name}\n${m.description || ""}`
-    ).join("\n\n");
-    
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text || "")}`;
-    window.open(whatsappUrl, "_blank");
-  };
-
   if (loading || menusLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -342,15 +307,6 @@ const AdminMenus = () => {
                   <Download className="w-4 h-4" />
                   Exportar CSV
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => shareWhatsApp()}
-                  className="gap-2"
-                >
-                  <Share2 className="w-4 h-4" />
-                  WhatsApp
-                </Button>
                 <Link to="/admin/menus/new">
                   <Button className="gap-2">
                     <Plus className="w-4 h-4" />
@@ -432,22 +388,6 @@ const AdminMenus = () => {
                         <Edit className="w-4 h-4" />
                       </Button>
                     </Link>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => exportMenusAsText(menu.week_start_date)}
-                      title="Baixar TXT"
-                    >
-                      <Download className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => shareWhatsApp(menu.week_start_date)}
-                      title="WhatsApp"
-                    >
-                      <Share2 className="w-4 h-4" />
-                    </Button>
                     <Button
                       variant="destructive"
                       size="sm"

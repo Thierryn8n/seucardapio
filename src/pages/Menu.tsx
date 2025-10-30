@@ -2,10 +2,15 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { WeeklyMenu } from "@/components/WeeklyMenu";
 import { useSettings } from "@/hooks/useSettings";
-import { ChevronLeft, ChevronRight, Sparkles, Heart } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles, Heart, Download, Share2, FileText, Image } from "lucide-react";
 import { startOfWeek, addWeeks, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 const Menu = () => {
   const { id } = useParams();
@@ -24,6 +29,125 @@ const Menu = () => {
 
   const goToCurrentWeek = () => {
     setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 0 }));
+  };
+
+  const { toast } = useToast();
+
+  const { data: menus = [] } = useQuery({
+    queryKey: ["menus", currentWeekStart, id],
+    queryFn: async () => {
+      const weekStart = format(currentWeekStart, "yyyy-MM-dd");
+      const { data, error } = await supabase
+        .from("menus")
+        .select("*")
+        .eq("user_id", id)
+        .eq("week_start_date", weekStart)
+        .order("day_of_week")
+        .order("meal_number");
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const exportAsPNG = async () => {
+    const element = document.getElementById("weekly-menu-content");
+    if (!element) return;
+
+    try {
+      const canvas = await html2canvas(element);
+      const link = document.createElement("a");
+      link.download = `cardapio-${format(currentWeekStart, "dd-MM-yyyy")}.png`;
+      link.href = canvas.toDataURL();
+      link.click();
+      toast({ title: "PNG baixado com sucesso!" });
+    } catch (error) {
+      toast({ title: "Erro ao gerar PNG", variant: "destructive" });
+    }
+  };
+
+  const exportAsPDF = async () => {
+    const element = document.getElementById("weekly-menu-content");
+    if (!element) return;
+
+    try {
+      const canvas = await html2canvas(element);
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const imgWidth = 210;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+      pdf.save(`cardapio-${format(currentWeekStart, "dd-MM-yyyy")}.pdf`);
+      toast({ title: "PDF baixado com sucesso!" });
+    } catch (error) {
+      toast({ title: "Erro ao gerar PDF", variant: "destructive" });
+    }
+  };
+
+  const exportAsText = () => {
+    if (!menus.length) {
+      toast({ title: "Nenhum cardápio para exportar", variant: "destructive" });
+      return;
+    }
+
+    const daysOfWeek = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+    let textContent = `CARDÁPIO SEMANAL - ${format(currentWeekStart, "dd/MM/yyyy")}\n`;
+    textContent += `${settings?.company_name || ""}\n\n`;
+    
+    const groupedMenus = menus.reduce((acc: any, menu) => {
+      if (!acc[menu.day_of_week]) acc[menu.day_of_week] = [];
+      acc[menu.day_of_week].push(menu);
+      return acc;
+    }, {});
+
+    Object.keys(groupedMenus).sort().forEach((day) => {
+      textContent += `\n${daysOfWeek[Number(day)]}\n`;
+      textContent += "=".repeat(30) + "\n";
+      groupedMenus[day].forEach((menu: any) => {
+        textContent += `\nRefeição ${menu.meal_number}:\n`;
+        textContent += `${menu.meal_name}\n`;
+        if (menu.description) {
+          textContent += `${menu.description}\n`;
+        }
+      });
+    });
+
+    const blob = new Blob([textContent], { type: "text/plain" });
+    const link = document.createElement("a");
+    link.download = `cardapio-${format(currentWeekStart, "dd-MM-yyyy")}.txt`;
+    link.href = URL.createObjectURL(blob);
+    link.click();
+    toast({ title: "Arquivo TXT baixado com sucesso!" });
+  };
+
+  const shareWhatsApp = () => {
+    if (!menus.length) {
+      toast({ title: "Nenhum cardápio para compartilhar", variant: "destructive" });
+      return;
+    }
+
+    const daysOfWeek = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+    let message = `*CARDÁPIO SEMANAL*\n${format(currentWeekStart, "dd/MM/yyyy")}\n\n`;
+    
+    const groupedMenus = menus.reduce((acc: any, menu) => {
+      if (!acc[menu.day_of_week]) acc[menu.day_of_week] = [];
+      acc[menu.day_of_week].push(menu);
+      return acc;
+    }, {});
+
+    Object.keys(groupedMenus).sort().forEach((day) => {
+      message += `\n*${daysOfWeek[Number(day)]}*\n`;
+      groupedMenus[day].forEach((menu: any) => {
+        message += `• ${menu.meal_name}`;
+        if (menu.description) {
+          message += ` - ${menu.description}`;
+        }
+        message += "\n";
+      });
+    });
+
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, "_blank");
   };
 
   return (
@@ -101,9 +225,53 @@ const Menu = () => {
         </div>
       </div>
 
+      {/* Share Actions */}
+      <div className="sticky top-[200px] z-10 bg-card/80 backdrop-blur-md border-b py-4 shadow-sm animate-fade-in" style={{ animationDelay: "0.15s" }}>
+        <div className="container mx-auto px-4">
+          <div className="flex flex-wrap items-center justify-center gap-3 max-w-4xl mx-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportAsPNG}
+              className="hover:bg-primary hover:text-primary-foreground transition-all"
+            >
+              <Image className="h-4 w-4 mr-2" />
+              Baixar PNG
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportAsPDF}
+              className="hover:bg-primary hover:text-primary-foreground transition-all"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Baixar PDF
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportAsText}
+              className="hover:bg-primary hover:text-primary-foreground transition-all"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Baixar TXT
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={shareWhatsApp}
+              className="hover:bg-green-600 hover:text-white transition-all"
+            >
+              <Share2 className="h-4 w-4 mr-2" />
+              Compartilhar WhatsApp
+            </Button>
+          </div>
+        </div>
+      </div>
+
       {/* Content */}
       <main className="container mx-auto px-4 py-12 relative z-0">
-        <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
+        <div id="weekly-menu-content" className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
           <WeeklyMenu weekStartDate={currentWeekStart} userId={id} />
         </div>
       </main>
