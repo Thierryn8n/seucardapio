@@ -51,42 +51,78 @@ const Menu = () => {
   });
 
   const exportAsPNG = async () => {
-    const element = document.getElementById("weekly-menu-content");
-    if (!element) return;
+    if (!menus.length) {
+      toast({ title: "Nenhum cardápio para exportar", variant: "destructive" });
+      return;
+    }
 
     try {
-      // Create a fixed A4-sized container for export
       const exportContainer = document.createElement("div");
       exportContainer.style.width = "210mm";
       exportContainer.style.minHeight = "297mm";
       exportContainer.style.backgroundColor = "#ffffff";
-      exportContainer.style.padding = "20mm";
+      exportContainer.style.padding = "15mm";
       exportContainer.style.position = "absolute";
       exportContainer.style.left = "-9999px";
       exportContainer.style.top = "0";
-      exportContainer.innerHTML = element.innerHTML;
+      exportContainer.style.fontFamily = "system-ui, -apple-system, sans-serif";
       
-      // Force all elements to be opaque
-      const allElements = exportContainer.querySelectorAll("*");
-      allElements.forEach((el: Element) => {
-        const htmlEl = el as HTMLElement;
-        htmlEl.style.opacity = "1";
-        htmlEl.style.backgroundColor = htmlEl.style.backgroundColor || "transparent";
-        if (htmlEl.classList.contains("bg-card")) {
-          htmlEl.style.backgroundColor = "#ffffff";
-        }
+      // Build export HTML with header
+      const daysOfWeek = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+      const groupedMenus = menus.reduce((acc: any, menu) => {
+        if (!acc[menu.day_of_week]) acc[menu.day_of_week] = [];
+        acc[menu.day_of_week].push(menu);
+        return acc;
+      }, {});
+
+      let html = '<div style="background: white;">';
+      
+      // Header with logo and title
+      html += '<div style="text-align: center; margin-bottom: 20px; border-bottom: 3px solid #f97316; padding-bottom: 15px;">';
+      if (settings?.logo_url) {
+        html += `<img src="${settings.logo_url}" style="width: ${settings.logo_size || 100}px; height: ${settings.logo_size || 100}px; object-fit: contain; margin: 0 auto 10px;" />`;
+      }
+      html += `<h1 style="font-size: 32px; font-weight: bold; color: #1a1a1a; margin: 0;">Cardápio Semanal</h1>`;
+      html += `<p style="font-size: 16px; color: #666; margin: 5px 0 0 0;">Semana de ${format(currentWeekStart, "dd/MM/yyyy")}</p>`;
+      if (settings?.company_name) {
+        html += `<p style="font-size: 14px; color: #888; margin: 5px 0 0 0;">${settings.company_name}</p>`;
+      }
+      html += '</div>';
+
+      // Days and meals
+      Object.keys(groupedMenus).sort().forEach((day) => {
+        html += `<div style="margin-bottom: 15px; page-break-inside: avoid;">`;
+        html += `<h2 style="font-size: 20px; font-weight: bold; color: #1a1a1a; margin: 0 0 8px 0; padding-left: 10px; border-left: 4px solid #f97316;">${daysOfWeek[Number(day)]}</h2>`;
+        html += '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">';
+        
+        groupedMenus[day].forEach((menu: any) => {
+          html += '<div style="background: #f9f9f9; border: 1px solid #e5e5e5; border-radius: 8px; padding: 10px; overflow: hidden;">';
+          if (menu.image_url) {
+            html += `<img src="${menu.image_url}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 6px; margin-bottom: 8px; display: block;" />`;
+          }
+          html += `<p style="font-size: 11px; color: #f97316; font-weight: 600; margin: 0 0 4px 0; text-transform: uppercase;">Refeição ${menu.meal_number}</p>`;
+          html += `<h3 style="font-size: 15px; font-weight: bold; color: #1a1a1a; margin: 0 0 4px 0;">${menu.meal_name}</h3>`;
+          if (menu.description) {
+            html += `<p style="font-size: 12px; color: #666; margin: 0; line-height: 1.4;">${menu.description}</p>`;
+          }
+          html += '</div>';
+        });
+        
+        html += '</div></div>';
       });
       
+      html += '</div>';
+      exportContainer.innerHTML = html;
       document.body.appendChild(exportContainer);
 
       const canvas = await html2canvas(exportContainer, {
         useCORS: true,
         allowTaint: true,
-        scale: 3,
+        scale: 4,
         logging: false,
         backgroundColor: "#ffffff",
-        windowWidth: 794, // A4 width in pixels at 96 DPI
-        windowHeight: 1123, // A4 height in pixels at 96 DPI
+        windowWidth: 794,
+        windowHeight: 1123,
       });
       
       document.body.removeChild(exportContainer);
@@ -103,50 +139,86 @@ const Menu = () => {
   };
 
   const exportAsPDF = async () => {
-    const element = document.getElementById("weekly-menu-content");
-    if (!element) return;
+    if (!menus.length) {
+      toast({ title: "Nenhum cardápio para exportar", variant: "destructive" });
+      return;
+    }
 
     try {
-      // Create a fixed A4-sized container for export
       const exportContainer = document.createElement("div");
       exportContainer.style.width = "210mm";
       exportContainer.style.minHeight = "297mm";
       exportContainer.style.backgroundColor = "#ffffff";
-      exportContainer.style.padding = "20mm";
+      exportContainer.style.padding = "15mm";
       exportContainer.style.position = "absolute";
       exportContainer.style.left = "-9999px";
       exportContainer.style.top = "0";
-      exportContainer.innerHTML = element.innerHTML;
+      exportContainer.style.fontFamily = "system-ui, -apple-system, sans-serif";
       
-      // Force all elements to be opaque
-      const allElements = exportContainer.querySelectorAll("*");
-      allElements.forEach((el: Element) => {
-        const htmlEl = el as HTMLElement;
-        htmlEl.style.opacity = "1";
-        htmlEl.style.backgroundColor = htmlEl.style.backgroundColor || "transparent";
-        if (htmlEl.classList.contains("bg-card")) {
-          htmlEl.style.backgroundColor = "#ffffff";
-        }
+      // Build export HTML with header
+      const daysOfWeek = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+      const groupedMenus = menus.reduce((acc: any, menu) => {
+        if (!acc[menu.day_of_week]) acc[menu.day_of_week] = [];
+        acc[menu.day_of_week].push(menu);
+        return acc;
+      }, {});
+
+      let html = '<div style="background: white;">';
+      
+      // Header with logo and title
+      html += '<div style="text-align: center; margin-bottom: 20px; border-bottom: 3px solid #f97316; padding-bottom: 15px;">';
+      if (settings?.logo_url) {
+        html += `<img src="${settings.logo_url}" style="width: ${settings.logo_size || 100}px; height: ${settings.logo_size || 100}px; object-fit: contain; margin: 0 auto 10px;" />`;
+      }
+      html += `<h1 style="font-size: 32px; font-weight: bold; color: #1a1a1a; margin: 0;">Cardápio Semanal</h1>`;
+      html += `<p style="font-size: 16px; color: #666; margin: 5px 0 0 0;">Semana de ${format(currentWeekStart, "dd/MM/yyyy")}</p>`;
+      if (settings?.company_name) {
+        html += `<p style="font-size: 14px; color: #888; margin: 5px 0 0 0;">${settings.company_name}</p>`;
+      }
+      html += '</div>';
+
+      // Days and meals
+      Object.keys(groupedMenus).sort().forEach((day) => {
+        html += `<div style="margin-bottom: 15px; page-break-inside: avoid;">`;
+        html += `<h2 style="font-size: 20px; font-weight: bold; color: #1a1a1a; margin: 0 0 8px 0; padding-left: 10px; border-left: 4px solid #f97316;">${daysOfWeek[Number(day)]}</h2>`;
+        html += '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">';
+        
+        groupedMenus[day].forEach((menu: any) => {
+          html += '<div style="background: #f9f9f9; border: 1px solid #e5e5e5; border-radius: 8px; padding: 10px; overflow: hidden;">';
+          if (menu.image_url) {
+            html += `<img src="${menu.image_url}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 6px; margin-bottom: 8px; display: block;" />`;
+          }
+          html += `<p style="font-size: 11px; color: #f97316; font-weight: 600; margin: 0 0 4px 0; text-transform: uppercase;">Refeição ${menu.meal_number}</p>`;
+          html += `<h3 style="font-size: 15px; font-weight: bold; color: #1a1a1a; margin: 0 0 4px 0;">${menu.meal_name}</h3>`;
+          if (menu.description) {
+            html += `<p style="font-size: 12px; color: #666; margin: 0; line-height: 1.4;">${menu.description}</p>`;
+          }
+          html += '</div>';
+        });
+        
+        html += '</div></div>';
       });
       
+      html += '</div>';
+      exportContainer.innerHTML = html;
       document.body.appendChild(exportContainer);
 
       const canvas = await html2canvas(exportContainer, {
         useCORS: true,
         allowTaint: true,
-        scale: 3,
+        scale: 4,
         logging: false,
         backgroundColor: "#ffffff",
-        windowWidth: 794, // A4 width in pixels at 96 DPI
-        windowHeight: 1123, // A4 height in pixels at 96 DPI
+        windowWidth: 794,
+        windowHeight: 1123,
       });
       
       document.body.removeChild(exportContainer);
 
       const imgData = canvas.toDataURL("image/png", 1.0);
       const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = 210; // A4 width in mm
-      const pdfHeight = 297; // A4 height in mm
+      const pdfWidth = 210;
+      const pdfHeight = 297;
       pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
       pdf.save(`cardapio-${format(currentWeekStart, "dd-MM-yyyy")}.pdf`);
       toast({ title: "PDF baixado com sucesso!" });
