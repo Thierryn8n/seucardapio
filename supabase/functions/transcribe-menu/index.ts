@@ -14,8 +14,20 @@ serve(async (req) => {
   try {
     const { imageBase64 } = await req.json();
     
-    if (!imageBase64) {
-      throw new Error('Imagem não fornecida');
+    // Validate presence and type
+    if (!imageBase64 || typeof imageBase64 !== 'string') {
+      throw new Error('Dados de imagem inválidos');
+    }
+
+    // Validate size (10MB limit to prevent DoS)
+    const MAX_SIZE = 10 * 1024 * 1024;
+    if (imageBase64.length > MAX_SIZE) {
+      throw new Error('Imagem muito grande (máximo 10MB)');
+    }
+
+    // Validate image format
+    if (!imageBase64.match(/^data:image\/(png|jpeg|jpg|webp);base64,/)) {
+      throw new Error('Formato de imagem inválido. Use PNG, JPEG ou WEBP');
     }
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');

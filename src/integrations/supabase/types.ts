@@ -24,7 +24,7 @@ export type Database = {
           meal_name: string
           meal_number: number
           updated_at: string
-          user_id: string | null
+          user_id: string
           week_start_date: string
         }
         Insert: {
@@ -36,7 +36,7 @@ export type Database = {
           meal_name: string
           meal_number: number
           updated_at?: string
-          user_id?: string | null
+          user_id: string
           week_start_date: string
         }
         Update: {
@@ -48,7 +48,7 @@ export type Database = {
           meal_name?: string
           meal_number?: number
           updated_at?: string
-          user_id?: string | null
+          user_id?: string
           week_start_date?: string
         }
         Relationships: []
