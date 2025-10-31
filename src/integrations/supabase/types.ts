@@ -88,6 +88,7 @@ export type Database = {
           donation_url: string | null
           favicon_url: string | null
           id: string
+          logo_size: number | null
           logo_url: string | null
           primary_color: string
           secondary_color: string
@@ -111,6 +112,7 @@ export type Database = {
           donation_url?: string | null
           favicon_url?: string | null
           id?: string
+          logo_size?: number | null
           logo_url?: string | null
           primary_color?: string
           secondary_color?: string
@@ -134,6 +136,7 @@ export type Database = {
           donation_url?: string | null
           favicon_url?: string | null
           id?: string
+          logo_size?: number | null
           logo_url?: string | null
           primary_color?: string
           secondary_color?: string

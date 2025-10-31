@@ -26,6 +26,7 @@ export default function AdminSettings() {
 
   const [formData, setFormData] = useState({
     company_name: "",
+    logo_size: 150,
     primary_color: "",
     secondary_color: "",
     accent_color: "",
@@ -47,6 +48,7 @@ export default function AdminSettings() {
     if (settings) {
       setFormData({
         company_name: settings.company_name,
+        logo_size: settings.logo_size || 150,
         primary_color: settings.primary_color,
         secondary_color: settings.secondary_color,
         accent_color: settings.accent_color,
@@ -198,6 +200,24 @@ export default function AdminSettings() {
                     />
                   )}
                 </div>
+              </div>
+
+              <div>
+                <Label htmlFor="logo_size">Tamanho da Logo (px)</Label>
+                <Input
+                  id="logo_size"
+                  type="number"
+                  min="50"
+                  max="500"
+                  value={formData.logo_size}
+                  onChange={(e) =>
+                    setFormData({ ...formData, logo_size: parseInt(e.target.value) || 150 })
+                  }
+                  placeholder="150"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Defina o tamanho da logo em pixels (50-500px)
+                </p>
               </div>
             </CardContent>
           </Card>

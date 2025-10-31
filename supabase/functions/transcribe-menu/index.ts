@@ -46,30 +46,51 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `Você é um assistente especializado em transcrever cardápios de restaurantes. 
-Analise a imagem fornecida e extraia TODOS os dados do cardápio de forma estruturada.
+            content: `Você é um assistente especializado em extrair informações de cardápios escolares.
+Analise a imagem e extraia TODOS os itens do cardápio com máxima precisão.
 
-IMPORTANTE: Retorne APENAS um objeto JSON válido, sem texto adicional, com esta estrutura exata:
+REGRAS CRÍTICAS PARA IDENTIFICAÇÃO:
+
+1. CATEGORIZAÇÃO AUTOMÁTICA (meal_number):
+   - MERENDA/CAFÉ DA MANHÃ: qualquer refeição matinal, lanche da manhã (meal_number: 1)
+   - ALMOÇO: refeição principal do meio-dia (meal_number: 2)  
+   - LANCHE DA TARDE: lanche vespertino, café da tarde (meal_number: 3)
+   - IDENTIFIQUE AUTOMATICAMENTE a categoria baseado no contexto e horário
+
+2. ESTRUTURA DO TÍTULO (meal_name):
+   - SEMPRE extraia APENAS o ingrediente/prato PRINCIPAL
+   - Exemplos CORRETOS: "Frango", "Macarrão à Bolonhesa", "Sopa de Legumes"
+   - Exemplos INCORRETOS: "Frango com arroz e feijão" (muito detalhado)
+   - O título deve ter no máximo 3-4 palavras
+
+3. ESTRUTURA DA DESCRIÇÃO (description):
+   - Coloque TODOS os acompanhamentos, condimentos e guarnições
+   - Separe os itens com vírgulas
+   - Exemplos: "arroz, feijão, batata frita, salada de alface e tomate"
+   - Se não houver acompanhamentos, deixe vazio
+
+4. DIAS DA SEMANA (day_of_week):
+   - 0=Domingo, 1=Segunda, 2=Terça, 3=Quarta, 4=Quinta, 5=Sexta, 6=Sábado
+   - Identifique o dia mencionado no cardápio
+
+5. MÚLTIPLAS OPÇÕES:
+   - Se houver opções alternativas (ex: "Frango OU Peixe"), crie itens SEPARADOS
+   - Cada opção deve ser um objeto individual no array
+
+FORMATO DE RETORNO (JSON puro, sem markdown):
 {
   "weekStartDate": "YYYY-MM-DD",
   "menus": [
     {
       "dayOfWeek": 0-6,
       "mealNumber": 1-3,
-      "mealName": "nome da refeição",
-      "description": "descrição detalhada"
+      "mealName": "Prato Principal",
+      "description": "acompanhamento 1, acompanhamento 2, acompanhamento 3"
     }
   ]
 }
 
-Regras:
-- dayOfWeek: 0=Domingo, 1=Segunda, 2=Terça, 3=Quarta, 4=Quinta, 5=Sexta, 6=Sábado
-- mealNumber: 1=Café da Manhã, 2=Almoço, 3=Jantar
-- Se não encontrar data, use a próxima segunda-feira
-- Extraia TODAS as refeições visíveis na imagem
-- Mantenha os nomes e descrições exatamente como aparecem
-- Se não houver descrição, use string vazia ""
-- Não invente dados que não estão na imagem`
+CRÍTICO: Retorne APENAS o JSON. Sem explicações, sem markdown, sem texto adicional.`
           },
           {
             role: 'user',

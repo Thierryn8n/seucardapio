@@ -238,11 +238,22 @@ const Menu = () => {
                   <img 
                     src={settings.logo_url} 
                     alt="Logo" 
-                    className="w-24 h-24 md:w-36 md:h-36 object-contain"
+                    style={{
+                      width: `${settings.logo_size || 150}px`,
+                      height: `${settings.logo_size || 150}px`,
+                      maxWidth: '100%'
+                    }}
+                    className="object-contain"
                   />
                 )}
                 {!settings?.logo_url && (
-                  <div className="w-24 h-24 md:w-36 md:h-36 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
+                  <div 
+                    style={{
+                      width: `${settings?.logo_size || 150}px`,
+                      height: `${settings?.logo_size || 150}px`,
+                    }}
+                    className="rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg"
+                  >
                     <Sparkles className="w-12 h-12 md:w-18 md:h-18 text-white" />
                   </div>
                 )}
