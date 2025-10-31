@@ -7,6 +7,7 @@ export interface Settings {
   company_name: string;
   logo_url?: string;
   favicon_url?: string;
+  logo_size: number;
   primary_color: string;
   secondary_color: string;
   accent_color: string;

@@ -55,19 +55,49 @@ const Menu = () => {
     if (!element) return;
 
     try {
-      const canvas = await html2canvas(element, {
+      // Create a fixed A4-sized container for export
+      const exportContainer = document.createElement("div");
+      exportContainer.style.width = "210mm";
+      exportContainer.style.minHeight = "297mm";
+      exportContainer.style.backgroundColor = "#ffffff";
+      exportContainer.style.padding = "20mm";
+      exportContainer.style.position = "absolute";
+      exportContainer.style.left = "-9999px";
+      exportContainer.style.top = "0";
+      exportContainer.innerHTML = element.innerHTML;
+      
+      // Force all elements to be opaque
+      const allElements = exportContainer.querySelectorAll("*");
+      allElements.forEach((el: Element) => {
+        const htmlEl = el as HTMLElement;
+        htmlEl.style.opacity = "1";
+        htmlEl.style.backgroundColor = htmlEl.style.backgroundColor || "transparent";
+        if (htmlEl.classList.contains("bg-card")) {
+          htmlEl.style.backgroundColor = "#ffffff";
+        }
+      });
+      
+      document.body.appendChild(exportContainer);
+
+      const canvas = await html2canvas(exportContainer, {
         useCORS: true,
         allowTaint: true,
-        scale: 2,
+        scale: 3,
         logging: false,
-        backgroundColor: '#ffffff'
+        backgroundColor: "#ffffff",
+        windowWidth: 794, // A4 width in pixels at 96 DPI
+        windowHeight: 1123, // A4 height in pixels at 96 DPI
       });
+      
+      document.body.removeChild(exportContainer);
+
       const link = document.createElement("a");
       link.download = `cardapio-${format(currentWeekStart, "dd-MM-yyyy")}.png`;
-      link.href = canvas.toDataURL();
+      link.href = canvas.toDataURL("image/png", 1.0);
       link.click();
       toast({ title: "PNG baixado com sucesso!" });
     } catch (error) {
+      console.error("Export error:", error);
       toast({ title: "Erro ao gerar PNG", variant: "destructive" });
     }
   };
@@ -77,21 +107,51 @@ const Menu = () => {
     if (!element) return;
 
     try {
-      const canvas = await html2canvas(element, {
+      // Create a fixed A4-sized container for export
+      const exportContainer = document.createElement("div");
+      exportContainer.style.width = "210mm";
+      exportContainer.style.minHeight = "297mm";
+      exportContainer.style.backgroundColor = "#ffffff";
+      exportContainer.style.padding = "20mm";
+      exportContainer.style.position = "absolute";
+      exportContainer.style.left = "-9999px";
+      exportContainer.style.top = "0";
+      exportContainer.innerHTML = element.innerHTML;
+      
+      // Force all elements to be opaque
+      const allElements = exportContainer.querySelectorAll("*");
+      allElements.forEach((el: Element) => {
+        const htmlEl = el as HTMLElement;
+        htmlEl.style.opacity = "1";
+        htmlEl.style.backgroundColor = htmlEl.style.backgroundColor || "transparent";
+        if (htmlEl.classList.contains("bg-card")) {
+          htmlEl.style.backgroundColor = "#ffffff";
+        }
+      });
+      
+      document.body.appendChild(exportContainer);
+
+      const canvas = await html2canvas(exportContainer, {
         useCORS: true,
         allowTaint: true,
-        scale: 2,
+        scale: 3,
         logging: false,
-        backgroundColor: '#ffffff'
+        backgroundColor: "#ffffff",
+        windowWidth: 794, // A4 width in pixels at 96 DPI
+        windowHeight: 1123, // A4 height in pixels at 96 DPI
       });
-      const imgData = canvas.toDataURL("image/png");
+      
+      document.body.removeChild(exportContainer);
+
+      const imgData = canvas.toDataURL("image/png", 1.0);
       const pdf = new jsPDF("p", "mm", "a4");
-      const imgWidth = 210;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+      const pdfWidth = 210; // A4 width in mm
+      const pdfHeight = 297; // A4 height in mm
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
       pdf.save(`cardapio-${format(currentWeekStart, "dd-MM-yyyy")}.pdf`);
       toast({ title: "PDF baixado com sucesso!" });
     } catch (error) {
+      console.error("Export error:", error);
       toast({ title: "Erro ao gerar PDF", variant: "destructive" });
     }
   };
