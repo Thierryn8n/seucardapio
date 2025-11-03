@@ -1,5 +1,0 @@
-supabase/
-supabase/functions/
-*.log
-.DS_Store
-node_modules/

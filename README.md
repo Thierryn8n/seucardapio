@@ -59,19 +59,6 @@ This project is built with:
 - React
 - shadcn-ui
 - Tailwind CSS
-- Supabase (backend e banco de dados)
-
-## Configuração do Supabase
-
-Este projeto utiliza Supabase como backend. Para configurar:
-
-1. Crie um projeto no [Supabase](https://supabase.com)
-2. Configure as variáveis de ambiente no arquivo `.env`:
-   ```
-   VITE_SUPABASE_URL=sua_url_do_supabase
-   VITE_SUPABASE_PUBLISHABLE_KEY=sua_chave_publica
-   ```
-3. As tabelas do banco de dados são gerenciadas através das migrations na pasta `supabase/migrations/`
 
 ## How can I deploy this project?
 
