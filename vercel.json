@@ -24,10 +24,5 @@
         }
       ]
     }
-  ],
-  "functions": {
-    "supabase/functions/transcribe-menu/index.ts": {
-      "runtime": "edge"
-    }
-  }
+  ]
 }

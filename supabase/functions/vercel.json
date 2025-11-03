@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "transcribe-menu/index.ts": {
+      "runtime": "edge@1.0.0"
+    }
+  }
+}
