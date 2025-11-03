@@ -1,5 +1,8 @@
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Home, ArrowLeft, AlertTriangle } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const NotFound = () => {
   const location = useLocation();
@@ -9,14 +12,46 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">404</h1>
-        <p className="mb-4 text-xl text-gray-600">Oops! Page not found</p>
-        <a href="/" className="text-blue-500 underline hover:text-blue-700">
-          Return to Home
-        </a>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/5 flex items-center justify-center p-4">
+      <Card className="max-w-md w-full">
+        <CardHeader className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-destructive/10 mb-4 mx-auto">
+            <AlertTriangle className="w-8 h-8 text-destructive" />
+          </div>
+          <CardTitle className="text-2xl">Página Não Encontrada</CardTitle>
+          <CardDescription>
+            A página que você está tentando acessar não existe ou foi movida.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="bg-muted rounded-lg p-3">
+            <p className="text-sm text-muted-foreground">
+              <strong>Caminho:</strong> {location.pathname}
+            </p>
+          </div>
+          <div className="space-y-3">
+            <Link to="/" className="w-full">
+              <Button className="w-full">
+                <Home className="w-4 h-4 mr-2" />
+                Voltar para Home
+              </Button>
+            </Link>
+            <Button 
+              variant="outline" 
+              onClick={() => window.history.back()} 
+              className="w-full"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar
+            </Button>
+          </div>
+          <div className="text-xs text-muted-foreground text-center space-y-1">
+            <p>• Use os links de navegação dentro da aplicação</p>
+            <p>• Evite usar os botões voltar/avançar do navegador</p>
+            <p>• Em caso de dúvidas, acesse a página inicial</p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

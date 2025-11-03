@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import ErrorBoundary from "./components/ErrorBoundary";
 import Landing from "./pages/Landing";
 import Menu from "./pages/Menu";
 import Auth from "./pages/Auth";
@@ -21,23 +22,30 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/:id/cardapio" element={<Menu />} />
-            <Route path="/auth" element={<Auth />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/admin/menus" element={<AdminMenus />} />
-          <Route path="/admin/menus/new" element={<AdminMenuForm />} />
-          <Route path="/admin/menus/:id" element={<AdminMenuForm />} />
-          <Route path="/admin/settings" element={<AdminSettings />} />
-          <Route path="/admin/gallery" element={<AdminGallery />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
+      <ErrorBoundary>
+        <BrowserRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+          basename={import.meta.env.BASE_URL || '/'}>
+          <AuthProvider>
+            <Routes>
+              <Route path="/" element={<Landing />} />
+              <Route path="/:id/cardapio" element={<Menu />} />
+              <Route path="/auth" element={<Auth />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="/admin/menus" element={<AdminMenus />} />
+            <Route path="/admin/menus/new" element={<AdminMenuForm />} />
+            <Route path="/admin/menus/:id" element={<AdminMenuForm />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/gallery" element={<AdminGallery />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </ErrorBoundary>
     </TooltipProvider>
   </QueryClientProvider>
 );

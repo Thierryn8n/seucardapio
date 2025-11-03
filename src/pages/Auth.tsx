@@ -5,22 +5,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { UtensilsCrossed, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useSafeNavigation } from "@/hooks/useSafeNavigation";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const { signIn, signUp, user } = useAuth();
-  const navigate = useNavigate();
+  const { navigate } = useSafeNavigation();
   const { toast } = useToast();
 
   // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate("/admin", { replace: true });
+    }
+  }, [user, navigate]);
+
+  // Se o usuário estiver logado, não renderiza nada enquanto redireciona
   if (user) {
-    navigate("/admin");
     return null;
   }
 
@@ -42,6 +48,7 @@ const Auth = () => {
           title: "Login realizado com sucesso!",
           description: "Redirecionando para o painel...",
         });
+        // O redirecionamento será tratado pelo useEffect
       }
     } catch (error: any) {
       toast({
