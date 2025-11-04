@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { UtensilsCrossed, ChevronLeft, ChevronRight, Camera, FileText, Share, Settings, MessageSquare, X } from "lucide-react";
+import { UtensilsCrossed, ChevronLeft, ChevronRight, Camera, FileText, Settings, MessageSquare, X } from "lucide-react";
 import { format, addDays, startOfWeek, addWeeks } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import clsx from "clsx";
@@ -255,7 +255,7 @@ const Menu = () => {
     
     try {
       // Ocultar a div sticky temporariamente
-      const stickyElement = document.querySelector('.sticky.top-4.z-10');
+      const stickyElement = document.querySelector('.sticky');
       if (stickyElement) {
         (stickyElement as HTMLElement).style.display = 'none';
       }
@@ -300,7 +300,7 @@ const Menu = () => {
     
     try {
       // Ocultar a div sticky temporariamente
-      const stickyElement = document.querySelector('.sticky.top-4.z-10');
+      const stickyElement = document.querySelector('.sticky');
       if (stickyElement) {
         (stickyElement as HTMLElement).style.display = 'none';
       }
@@ -370,7 +370,7 @@ const Menu = () => {
     }
   };
 
-  const shareOnWhatsApp = async () => {
+  const generateAndDownloadPNG = async () => {
     if (!menus.length) {
       toast({ title: "Nenhum cardápio para compartilhar", variant: "destructive" });
       return;
@@ -402,28 +402,12 @@ const Menu = () => {
         const file = new File([blob], "cardapio.png", { type: "image/png" });
         const fileUrl = URL.createObjectURL(file);
         
-        // Compartilhar via Web Share API se disponível
-        if (navigator.share) {
-          navigator
-            .share({
-              title: "Cardápio Semanal",
-              text: `Cardápio da semana de ${format(currentWeekStart, "dd/MM", { locale: ptBR })} a ${format(
-                addDays(currentWeekStart, 6),
-                "dd/MM",
-                { locale: ptBR }
-              )}`,
-              files: [file],
-            })
-            .then(() => toast({ title: "Compartilhado com sucesso!" }))
-            .catch(error => {
-              console.error("Erro ao compartilhar:", error);
-              // Fallback para WhatsApp
-              shareViaWhatsApp(fileUrl);
-            });
-        } else {
-          // Fallback para WhatsApp
-          shareViaWhatsApp(fileUrl);
-        }
+        // Sempre oferecer download da imagem (evita bloqueio por popup)
+        const link = document.createElement("a");
+        link.href = fileUrl;
+        link.download = `cardapio-${format(currentWeekStart, "yyyy-MM-dd")}.png`;
+        link.click();
+        toast({ title: "Imagem do cardápio gerada e baixada" });
       }, "image/png");
     } catch (error) {
       console.error("Erro ao compartilhar:", error);
@@ -533,6 +517,11 @@ const Menu = () => {
   };
 
   // Função para compartilhar via WhatsApp com opções
+  const openWhatsAppWithText = (text: string) => {
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(whatsappUrl, "_blank");
+  };
+
   const handleWhatsAppShare = async (format: 'png' | 'pdf' | 'txt') => {
     if (!menus.length) {
       toast({ title: "Nenhum cardápio para compartilhar", variant: "destructive" });
@@ -545,14 +534,17 @@ const Menu = () => {
       if (format === 'txt') {
         // Compartilhar texto diretamente
         const text = generateWhatsAppText();
-        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
-        window.open(whatsappUrl, "_blank");
+        openWhatsAppWithText(text);
         toast({ title: "Cardápio em texto enviado para WhatsApp!" });
       } else if (format === 'png') {
-        // Compartilhar como imagem
-        await shareOnWhatsApp();
+        // Abrir WhatsApp imediatamente e gerar imagem para baixar
+        const textIntro = `${generateWhatsAppText()}\n\nA imagem do cardápio será baixada em seguida. Anexe-a na conversa.`;
+        openWhatsAppWithText(textIntro);
+        await generateAndDownloadPNG();
       } else if (format === 'pdf') {
-        // Gerar PDF e compartilhar
+        // Abrir WhatsApp imediatamente e gerar PDF para baixar
+        const textIntro = `${generateWhatsAppText()}\n\nO PDF do cardápio será baixado em seguida. Anexe-o na conversa.`;
+        openWhatsAppWithText(textIntro);
         await shareWhatsAppPDF();
       }
     } catch (error) {
@@ -565,7 +557,7 @@ const Menu = () => {
   const shareWhatsAppPDF = async () => {
     try {
       // Ocultar a div sticky temporariamente
-      const stickyElement = document.querySelector('.sticky.top-4.z-10');
+      const stickyElement = document.querySelector('.sticky');
       if (stickyElement) {
         (stickyElement as HTMLElement).style.display = 'none';
       }
@@ -635,8 +627,7 @@ const Menu = () => {
         { locale: ptBR }
       )}\\n\\nPDF anexado! 📄`;
       
-      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
-      window.open(whatsappUrl, "_blank");
+      // Não abrir WhatsApp aqui para evitar bloqueio; já abrimos antes
       
       // Oferecer download do PDF
       const link = document.createElement("a");
@@ -644,7 +635,7 @@ const Menu = () => {
       link.download = `cardapio-${format(currentWeekStart, "yyyy-MM-dd")}.pdf`;
       link.click();
       
-      toast({ title: "PDF gerado e link enviado para WhatsApp!" });
+      toast({ title: "PDF do cardápio gerado e baixado" });
     } catch (error) {
       console.error("Erro ao gerar PDF para WhatsApp:", error);
       toast({ title: "Erro ao gerar PDF", variant: "destructive" });
@@ -763,13 +754,13 @@ const Menu = () => {
         </div>
         
         {/* Barra de navegação fixa */}
-        <div className="sticky top-4 z-10 mb-6 flex items-center justify-between rounded-xl bg-white/80 p-3 shadow-md backdrop-blur-md">
-          <div className="flex items-center space-x-1">
+        <div className="sticky top-2 sm:top-4 z-40 mb-4 sm:mb-6 w-full flex flex-col sm:flex-row items-center sm:items-center justify-evenly sm:justify-between rounded-xl bg-white/80 p-2 sm:p-3 shadow-md backdrop-blur-md gap-2 text-center">
+          <div className="w-full sm:w-auto flex items-center justify-center flex-wrap gap-2 sm:gap-1">
             <button
               onClick={goToPreviousWeek}
               className="rounded-lg p-2 text-gray-700 hover:bg-gray-100"
             >
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-6 w-6 sm:h-5 sm:w-5" />
             </button>
             
             {(() => {
@@ -778,7 +769,7 @@ const Menu = () => {
               const startDate = firstVisibleDay?.date || currentWeekStart;
               const endDate = lastVisibleDay?.date || addDays(currentWeekStart, 6);
               return (
-                <div className="text-sm font-medium">
+                <div className="text-xs sm:text-sm font-medium">
                   Semana do dia <span className="font-semibold">{format(startDate, 'd', { locale: ptBR })}</span> ao dia <span className="font-semibold">{format(endDate, 'd', { locale: ptBR })}</span>
                 </div>
               );
@@ -788,24 +779,24 @@ const Menu = () => {
               onClick={goToNextWeek}
               className="rounded-lg p-2 text-gray-700 hover:bg-gray-100"
             >
-              <ChevronRight className="h-5 w-5" />
+              <ChevronRight className="h-6 w-6 sm:h-5 sm:w-5" />
             </button>
             
             <button
               onClick={goToCurrentWeek}
-              className="ml-1 rounded-lg px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
+              className="ml-1 rounded-lg px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 hidden sm:inline"
             >
               Voltar para semana atual
             </button>
           </div>
           
-          <div className="flex items-center space-x-1">
+          <div className="w-full sm:w-auto flex items-center justify-center flex-wrap gap-2 sm:gap-1 overflow-x-auto max-w-full -mx-1 px-1">
             <button
               onClick={exportAsPNG}
               className="flex items-center rounded-lg p-2 text-gray-700 hover:bg-gray-100"
               title="Exportar como PNG"
             >
-              <Camera className="h-5 w-5" />
+              <Camera className="h-6 w-6 sm:h-5 sm:w-5" />
               <span className="ml-1 hidden sm:inline">PNG</span>
             </button>
             
@@ -814,7 +805,7 @@ const Menu = () => {
               className="flex items-center rounded-lg p-2 text-gray-700 hover:bg-gray-100"
               title="Exportar como PDF"
             >
-              <FileText className="h-5 w-5" />
+              <FileText className="h-6 w-6 sm:h-5 sm:w-5" />
               <span className="ml-1 hidden sm:inline">PDF</span>
             </button>
             
@@ -824,12 +815,12 @@ const Menu = () => {
                 className="flex items-center rounded-lg p-2 text-gray-700 hover:bg-gray-100"
                 title="Compartilhar no WhatsApp"
               >
-                <Share className="h-5 w-5" />
+                <img src="/whatsapp.png" alt="WhatsApp" className="h-6 w-6 sm:h-5 sm:w-5 object-contain" onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/whatsapp.svg'; }} />
                 <span className="ml-1 hidden sm:inline">WhatsApp</span>
               </button>
               
               {showWhatsAppOptions && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
+                <div className="absolute right-0 mt-2 w-40 sm:w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                   <div className="py-1">
                     <button
                       onClick={() => handleWhatsAppShare('png')}
@@ -951,7 +942,7 @@ const Menu = () => {
       {/* Overlay para fechar o toggle do WhatsApp */}
       {showWhatsAppOptions && (
         <div 
-          className="fixed inset-0 z-10" 
+          className="fixed inset-0 z-0" 
           onClick={() => setShowWhatsAppOptions(false)}
         />
       )}
@@ -964,7 +955,7 @@ const Menu = () => {
           title="Criado por Seu Cardápio"
         >
           <span className="text-gray-700">Criado por</span>
-          <img src={logoColorido} alt="Seu Cardápio" className="h-[1.2rem] w-auto" />
+          <img src={logoColorido} alt="Seu Cardápio" className="h-[1.5rem] w-auto" />
         </Link>
         <Link
           to="/auth"
