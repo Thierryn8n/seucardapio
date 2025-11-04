@@ -92,46 +92,50 @@ export const WeeklyMenu = ({ weekStartDate, userId }: WeeklyMenuProps) => {
       {activeDays.map((dayIndex) => {
         const currentDate = addDays(weekStartDate, dayIndex);
         const dayMenus = menusByDay[dayIndex] || [];
-
+        
         return (
-          <div key={dayIndex} className="space-y-6 animate-fade-in" style={{ animationDelay: `${dayIndex * 0.1}s` }}>
-            <div className="relative">
-              <div className="absolute -left-3 top-0 bottom-0 w-1 bg-gradient-to-b from-primary via-accent to-secondary rounded-full" />
-              <div className="border-l-4 border-primary pl-6 py-2 bg-gradient-to-r from-primary/5 to-transparent rounded-r-xl">
-                <h2 className="text-4xl font-bold text-foreground mb-1">
-                  {weekDays[dayIndex]}
-                </h2>
-                <p className="text-base text-muted-foreground font-medium">
+          <div 
+            key={dayIndex} 
+            className="animate-fade-in relative bg-gradient-to-br from-primary/5 to-transparent rounded-xl p-6 border shadow-sm" 
+            style={{ animationDelay: `${dayIndex * 0.1}s` }}
+          >
+            {/* Barra lateral gradiente */}
+            <div className="absolute left-0 top-0 bottom-0 w-2 bg-gradient-to-b from-primary via-accent to-secondary rounded-l-xl"></div>
+            
+            <div className="pl-4 space-y-6">
+              <div className="space-y-1">
+                <h2 className="text-4xl font-bold font-playfair">{weekDays[dayIndex]}</h2>
+                <p className="text-muted-foreground text-lg">
                   {format(currentDate, "d 'de' MMMM", { locale: ptBR })}
                 </p>
               </div>
-            </div>
 
-            {dayMenus.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {dayMenus.map((menu) => (
-                  <MealCard
-                    key={menu.id}
-                    mealNumber={menu.meal_number}
-                    mealName={menu.meal_name}
-                    description={menu.description}
-                    imageUrl={menu.image_url}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-16 bg-gradient-to-br from-muted/30 to-muted/10 rounded-2xl border-2 border-dashed border-border hover:border-primary/50 transition-all duration-300">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
-                  <UtensilsCrossed className="w-8 h-8 text-muted-foreground" />
+              {dayMenus.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {dayMenus.map((menu) => (
+                    <MealCard
+                      key={menu.id}
+                      mealNumber={menu.meal_number}
+                      mealName={menu.meal_name}
+                      description={menu.description}
+                      imageUrl={menu.image_url}
+                    />
+                  ))}
                 </div>
-                <p className="text-muted-foreground text-lg font-medium">
-                  Nenhum cardápio cadastrado para este dia
-                </p>
-                <p className="text-muted-foreground/60 text-sm mt-2">
-                  Em breve teremos novidades deliciosas!
-                </p>
-              </div>
-            )}
+              ) : (
+                <div className="text-center py-16 bg-gradient-to-br from-muted/30 to-muted/10 rounded-2xl border-2 border-dashed border-border hover:border-primary/50 transition-all duration-300">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 mb-4">
+                    <UtensilsCrossed className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <p className="text-muted-foreground text-lg font-medium">
+                    Nenhum cardápio cadastrado para este dia
+                  </p>
+                  <p className="text-muted-foreground/60 text-sm mt-2">
+                    Em breve teremos novidades deliciosas!
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         );
       })}

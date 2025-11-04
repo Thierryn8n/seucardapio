@@ -7,6 +7,12 @@ interface MealCardProps {
   mealName: string;
   description?: string;
   imageUrl?: string;
+  calories?: number;
+  macros?: {
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
 }
 
 const mealLabels = ["Café da Manhã", "Almoço", "Lanche", "Jantar"];
@@ -17,7 +23,7 @@ const mealGradients = [
   "from-purple-500/20 to-pink-500/20"
 ];
 
-export const MealCard = ({ mealNumber, mealName, description, imageUrl }: MealCardProps) => {
+export const MealCard = ({ mealNumber, mealName, description, imageUrl, calories, macros }: MealCardProps) => {
   return (
     <Card className="group overflow-hidden transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 border-2 hover:border-primary/50 animate-fade-in">
       {imageUrl ? (
@@ -50,6 +56,18 @@ export const MealCard = ({ mealNumber, mealName, description, imageUrl }: MealCa
           <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
             {description}
           </p>
+        )}
+        {calories && (
+          <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+            <span className="font-medium">{calories} kcal</span>
+            {macros && (
+              <div className="flex gap-2">
+                <span>P: {macros.protein}g</span>
+                <span>C: {macros.carbs}g</span>
+                <span>G: {macros.fat}g</span>
+              </div>
+            )}
+          </div>
         )}
       </CardContent>
     </Card>

@@ -1,34 +1,29 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { UtensilsCrossed, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useSafeNavigation } from "@/hooks/useSafeNavigation";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp, user } = useAuth();
-  const { navigate } = useSafeNavigation();
+  const { signIn, signUp, user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Redirect if already logged in
+  // Redirect if already logged in (avoid navigating during render)
   useEffect(() => {
     if (user) {
-      navigate("/admin", { replace: true });
+      navigate("/admin");
     }
   }, [user, navigate]);
-
-  // Se o usuário estiver logado, não renderiza nada enquanto redireciona
-  if (user) {
-    return null;
-  }
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +43,6 @@ const Auth = () => {
           title: "Login realizado com sucesso!",
           description: "Redirecionando para o painel...",
         });
-        // O redirecionamento será tratado pelo useEffect
       }
     } catch (error: any) {
       toast({
@@ -90,6 +84,15 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  // Optional: show nothing while checking auth state to prevent flicker
+  if (authLoading && !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-secondary/5">
+        <div className="animate-spin h-8 w-8 rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/5 flex items-center justify-center p-4">

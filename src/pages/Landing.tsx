@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "react-router-dom";
+import Background from "@/components/Background";
 import { 
   Sparkles, 
   Calendar, 
@@ -14,10 +15,8 @@ import {
 
 const Landing = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10 relative overflow-hidden">
-      {/* Decorative gradient orbs */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl opacity-50 animate-pulse" />
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-secondary/10 rounded-full blur-3xl opacity-50 animate-pulse" style={{ animationDelay: "1s" }} />
+    <div className="min-h-screen relative overflow-hidden">
+      <Background />
       
       {/* Header */}
       <header className="sticky top-0 z-10 bg-card/80 backdrop-blur-md border-b shadow-lg">
