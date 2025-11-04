@@ -4,7 +4,7 @@ import { UtensilsCrossed, ChevronLeft, ChevronRight, Camera, FileText, Share, Se
 import { format, addDays, startOfWeek, addWeeks } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import clsx from "clsx";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -752,10 +752,10 @@ const Menu = () => {
       {/* Cabeçalho centralizado com logo */}
       <div className="mx-auto max-w-4xl px-4 py-8">
         <div className="mb-8 flex flex-col items-center justify-center">
-          <div className="mb-4 flex items-center space-x-64">
-            <img src={logoColorido} alt="Seu Cardápio" className="h-16 w-auto" />
+          <div className="mb-4 flex flex-wrap items-center justify-center gap-4 sm:gap-16">
+            <img src={logoColorido} alt="Seu Cardápio" className="h-12 w-auto sm:h-16" />
             {settings?.logo_url && (
-              <img src={settings.logo_url} alt={settings?.companyName || "Logo da Empresa"} className="h-16 w-auto" />
+              <img src={settings.logo_url} alt={settings?.companyName || "Logo da Empresa"} className="h-12 w-auto sm:h-16" />
             )}
           </div>
           <h2 className="text-4xl font-bold text-gray-900">Cardápio Semanal</h2>
@@ -772,9 +772,17 @@ const Menu = () => {
               <ChevronLeft className="h-5 w-5" />
             </button>
             
-            <div className="text-sm font-medium">
-              Semana de {format(currentWeekStart, 'd', { locale: ptBR })} a {format(addDays(currentWeekStart, 6), 'd', { locale: ptBR })}
-            </div>
+            {(() => {
+              const firstVisibleDay = days.find(d => d.visible !== false);
+              const lastVisibleDay = [...days].reverse().find(d => d.visible !== false);
+              const startDate = firstVisibleDay?.date || currentWeekStart;
+              const endDate = lastVisibleDay?.date || addDays(currentWeekStart, 6);
+              return (
+                <div className="text-sm font-medium">
+                  Semana do dia <span className="font-semibold">{format(startDate, 'd', { locale: ptBR })}</span> ao dia <span className="font-semibold">{format(endDate, 'd', { locale: ptBR })}</span>
+                </div>
+              );
+            })()}
             
             <button
               onClick={goToNextWeek}
@@ -886,8 +894,17 @@ const Menu = () => {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Seu Cardápio</h1>
                 <p className="text-sm text-gray-500">
-                  Semana de {format(currentWeekStart, 'dd/MM/yyyy', { locale: ptBR })} a{" "}
-                  {format(addDays(currentWeekStart, 6), 'dd/MM/yyyy', { locale: ptBR })}
+                  {(() => {
+                    const firstVisibleDay = days.find(d => d.visible !== false);
+                    const lastVisibleDay = [...days].reverse().find(d => d.visible !== false);
+                    const startDate = firstVisibleDay?.date || currentWeekStart;
+                    const endDate = lastVisibleDay?.date || addDays(currentWeekStart, 6);
+                    return (
+                      <>
+                        Semana do dia <span className="font-semibold">{format(startDate, 'dd/MM/yyyy', { locale: ptBR })}</span> ao dia <span className="font-semibold">{format(endDate, 'dd/MM/yyyy', { locale: ptBR })}</span>
+                      </>
+                    );
+                  })()}
                 </p>
               </div>
             </div>
@@ -930,7 +947,7 @@ const Menu = () => {
       
       {/* Modais */}
       {showPersonalizationModal && <PersonalizationModal />}
-      
+
       {/* Overlay para fechar o toggle do WhatsApp */}
       {showWhatsAppOptions && (
         <div 
@@ -938,6 +955,25 @@ const Menu = () => {
           onClick={() => setShowWhatsAppOptions(false)}
         />
       )}
+
+      {/* Badge flutuante: Criado por + Crie o seu também */}
+      <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2">
+        <Link
+          to="/"
+          className="flex items-center gap-2 rounded-full border bg-white/90 px-3 py-1 text-xs shadow-sm backdrop-blur hover:bg-white"
+          title="Criado por Seu Cardápio"
+        >
+          <span className="text-gray-700">Criado por</span>
+          <img src={logoColorido} alt="Seu Cardápio" className="h-[1.2rem] w-auto" />
+        </Link>
+        <Link
+          to="/auth"
+          className="rounded-full border bg-orange-500/90 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-orange-500"
+          title="Crie o seu também"
+        >
+          Crie o seu também
+        </Link>
+      </div>
     </div>
   );
 };
