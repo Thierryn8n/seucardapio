@@ -12,6 +12,7 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { useSettings } from "@/hooks/useSettings";
 import Background from "@/components/Background";
+import { MealSuggestions } from "@/components/MealSuggestions";
 
 // Interfaces
 interface Meal {
@@ -869,6 +870,11 @@ const Menu = () => {
             .map((day, index) => (
               <DayCard key={index} day={day} />
             ))}
+        </div>
+
+        {/* Sugestões dos colaboradores */}
+        <div className="mt-8">
+          <MealSuggestions />
         </div>
       </div>
       

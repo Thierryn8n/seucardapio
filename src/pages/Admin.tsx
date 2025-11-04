@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogOut, Calendar, Plus, List, Settings } from "lucide-react";
+import { LogOut, Calendar, Plus, List, Settings, MessageSquare } from "lucide-react";
 
 const Admin = () => {
   const { user, signOut, isAdmin, loading } = useAuth();
@@ -98,6 +98,18 @@ const Admin = () => {
                 <CardTitle>Configurações</CardTitle>
                 <CardDescription>
                   Personalize cores, fontes, dias da semana e mais
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
+          <Link to={isAdmin ? "/admin/suggestions" : "#"} className={!isAdmin ? "pointer-events-none opacity-50" : ""}>
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+              <CardHeader>
+                <MessageSquare className="w-8 h-8 mb-2 text-purple-500" />
+                <CardTitle>Sugestões de Refeições</CardTitle>
+                <CardDescription>
+                  Gerencie as sugestões enviadas pelos colaboradores
                 </CardDescription>
               </CardHeader>
             </Card>

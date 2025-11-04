@@ -12,6 +12,7 @@ import AdminMenus from "./pages/AdminMenus";
 import AdminMenuForm from "./pages/AdminMenuForm";
 import AdminSettings from "./pages/AdminSettings";
 import AdminGallery from "./pages/AdminGallery";
+import AdminMealSuggestions from "./pages/AdminMealSuggestions";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
           <Route path="/admin/menus/:id" element={<AdminMenuForm />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
           <Route path="/admin/gallery" element={<AdminGallery />} />
+          <Route path="/admin/suggestions" element={<AdminMealSuggestions />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
