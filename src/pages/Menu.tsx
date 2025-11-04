@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { UtensilsCrossed, ChevronLeft, ChevronRight, Camera, FileText, Share, Settings, MessageSquare, X } from "lucide-react";
 import { format, addDays, startOfWeek, addWeeks } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -81,6 +82,7 @@ const getMealType = (mealNumber: number): "breakfast" | "lunch" | "dinner" | "sn
 const Menu = () => {
   const { id } = useParams();
   const { settings } = useSettings();
+  const { isAdmin } = useAuth();
   const exportRef = useRef(null);
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
     return startOfWeek(new Date(), { weekStartsOn: 0 });
