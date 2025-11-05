@@ -12,7 +12,7 @@ import { decryptUserRole } from "@/integrations/mercadopago/mercadopago.encrypti
 
 const AdminUsers = () => {
   const navigate = useNavigate();
-  const { user, loading, isAdmin, updateUserRole } = useAuth();
+  const { user, loading, isAdmin, isAdminMaster, isAdminDelivery, updateUserRole } = useAuth();
   const { toast } = useToast();
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
@@ -24,41 +24,101 @@ const AdminUsers = () => {
 
   const fetchUsers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, email, user_plan, created_at, last_login, status, role_encrypted')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        throw error;
+      setLoadingUsers(true);
+      
+      console.log('Usuário atual:', user?.id);
+      console.log('É admin?', isAdmin);
+      
+      // Só admin master pode carregar lista de usuários
+      if (!isAdminMaster) {
+        console.warn('Usuário não é admin master, abortando carregamento');
+        return;
       }
 
-      // Descriptografar roles
-      const usersWithDecryptedRoles = await Promise.all(
-        (data || []).map(async (user) => {
-          let role = 'user';
-          if (user.role_encrypted) {
-            try {
-              role = decryptUserRole(user.role_encrypted, user.id);
-            } catch (error) {
-              console.error(`Erro ao descriptografar role do usuário ${user.id}:`, error);
-            }
-          }
-          
-          return {
-            ...user,
-            role,
-            plan: user.user_plan || 'free',
-          };
-        })
-      );
+      // Buscar dados com tratamento individual de erros
+      let profilesData = [];
+      let subscriptionsData = [];
+      let rolesData = [];
 
-      setUsers(usersWithDecryptedRoles);
+      // Buscar profiles (com tratamento de erro)
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, email, is_admin, created_at, updated_at');
+        
+        if (error) {
+          console.error('Erro ao buscar profiles:', error);
+          toast({
+            title: 'Erro ao carregar perfis',
+            description: error.message,
+            variant: 'destructive'
+          });
+        } else {
+          profilesData = data || [];
+        }
+      } catch (err) {
+        console.error('Exceção ao buscar profiles:', err);
+      }
+
+      // Buscar subscriptions (com tratamento de erro)
+      try {
+        const { data, error } = await supabase
+          .from('subscriptions')
+          .select('user_id, plan, status, started_at, expires_at');
+        
+        if (error) {
+          console.error('Erro ao buscar subscriptions:', error);
+        } else {
+          subscriptionsData = data || [];
+        }
+      } catch (err) {
+        console.error('Exceção ao buscar subscriptions:', err);
+      }
+
+      // Buscar user_roles (com tratamento de erro)
+      try {
+        const { data, error } = await supabase
+          .from('user_roles')
+          .select('user_id, role');
+        
+        if (error) {
+          console.error('Erro ao buscar roles:', error);
+        } else {
+          rolesData = data || [];
+        }
+      } catch (err) {
+        console.error('Exceção ao buscar roles:', err);
+      }
+
+      console.log('Profiles data:', profilesData);
+      console.log('Subscriptions data:', subscriptionsData);
+      console.log('Roles data:', rolesData);
+
+      // Combinar dados (mesmo que parcial)
+      const baseUsers = profilesData.map(profile => {
+        const userSubscription = subscriptionsData.find(s => s.user_id === profile.id);
+        const userRole = rolesData.find(r => r.user_id === profile.id);
+        
+        return {
+          id: profile.id,
+          email: profile.email,
+          role: userRole?.role || (profile.is_admin ? 'admin' : 'user'),
+          plan: userSubscription?.plan || 'free',
+          status: userSubscription?.status || 'active',
+          created_at: profile.created_at,
+          last_login: profile.updated_at,
+        };
+      });
+
+      console.log('Usuários combinados:', baseUsers.length, 'usuários');
+      console.log('Usuários data:', baseUsers);
+      
+      setUsers(baseUsers);
     } catch (error) {
-      console.error('Erro ao buscar usuários:', error);
+      console.error('Erro geral ao buscar usuários:', error);
       toast({
         title: 'Erro',
-        description: 'Não foi possível carregar os usuários.',
+        description: error.message || 'Não foi possível carregar os usuários.',
         variant: 'destructive',
       });
     } finally {
@@ -77,12 +137,18 @@ const AdminUsers = () => {
     );
   }
 
-  if (!user || !isAdmin) {
+  // Só admin master (usuário em ambas: profiles.is_admin=true E user_roles.role='admin') pode acessar
+  if (!user || !isAdminMaster) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900">Acesso Negado</h1>
-          <p className="mt-2 text-gray-600">Você não tem permissão para acessar esta área.</p>
+          <p className="mt-2 text-gray-600">
+            {isAdminDelivery 
+              ? "❌ Admin básico não tem acesso à lista de usuários. Apenas Admin Master tem acesso completo."
+              : "Você não tem permissão para acessar esta área."
+            }
+          </p>
           <Button 
             onClick={() => navigate("/")}
             className="mt-4 bg-orange-500 hover:bg-orange-600"

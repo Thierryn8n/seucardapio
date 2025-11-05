@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function AdminSettings() {
   const navigate = useNavigate();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isAdminMaster, isAdminDelivery } = useAuth();
   const { settings, isLoading, updateSettings } = useSettings();
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
@@ -113,6 +113,23 @@ export default function AdminSettings() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Verificar se é admin master para acessar esta página
+  if (!isAdminMaster) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-foreground mb-4">Acesso Restrito</h1>
+          <p className="text-muted-foreground mb-4">
+            {isAdminDelivery ? "❌ Admin não consegue ver configurações de outros usuários" : "Apenas administradores master podem acessar esta página."}
+          </p>
+          <Button onClick={() => navigate("/admin")}>
+            Voltar ao Painel
+          </Button>
+        </div>
       </div>
     );
   }

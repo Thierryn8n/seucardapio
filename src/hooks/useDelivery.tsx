@@ -95,7 +95,7 @@ export const useProducts = () => {
   });
 
   const createProduct = useMutation({
-    mutationFn: async (product: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (product: Omit<Product, 'id' | 'updated_at'> & { created_at?: string }) => {
       const { data, error } = await supabase
         .from("products")
         .insert(product)

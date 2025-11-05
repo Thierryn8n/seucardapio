@@ -31,11 +31,10 @@ export const useSubscription = () => {
       const { data, error } = await supabase
         .from("subscriptions")
         .select("*")
-        .eq("user_id", user.id)
-        .single();
+        .eq("user_id", user.id);
 
       if (error) throw error;
-      return data as Subscription;
+      return data && data.length > 0 ? data[0] as Subscription : null;
     },
     enabled: !!user,
   });

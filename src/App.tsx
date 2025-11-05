@@ -20,6 +20,7 @@ import AdminMealSuggestions from "./pages/AdminMealSuggestions";
 import AdminProducts from "./pages/AdminProducts";
 import AdminOrders from "./pages/AdminOrders";
 import AdminCoupons from "./pages/AdminCoupons";
+import AdminLevelConfig from "./pages/AdminLevelConfig";
 import CustomerDelivery from "./pages/CustomerDelivery";
 import CustomerOrderTracking from "./pages/CustomerOrderTracking";
 import NotFound from "./pages/NotFound";
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/admin/products" element={<AdminProducts />} />
             <Route path="/admin/orders" element={<AdminOrders />} />
             <Route path="/admin/coupons" element={<AdminCoupons />} />
+            <Route path="/admin/level-config" element={<AdminLevelConfig />} />
             <Route path="/delivery" element={<CustomerDelivery />} />
             <Route path="/delivery/orders/:orderId" element={<CustomerOrderTracking />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

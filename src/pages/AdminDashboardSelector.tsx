@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { LogOut, Calendar, Plus, List, Settings, MessageSquare, Crown, Truck } from "lucide-react";
 
 const AdminDashboardSelector = () => {
-  const { user, signOut, isAdmin, isAdminMaster, isAdminDelivery, userPlan, loading } = useAuth();
+  const { user, signOut, isAdmin, isAdminMaster, isAdminDelivery, userPlan, loading, levelConfigs, getPanelForPlan } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -25,7 +25,11 @@ const AdminDashboardSelector = () => {
 
   if (!user) return null;
 
-  // Admin Master também começa no painel de delivery, mas com acesso ao painel geral
+  // Verificar qual painel o plano atual deve usar
+  const currentPanel = getPanelForPlan(userPlan || '');
+  
+  // Admin master tem acesso automático a todos os níveis (1, 2, 3)
+  const showPremiumPanel = (userPlan === 'premium' && (currentPanel === 'simple' || !currentPanel)) || isAdminMaster;
 
   return (
     <div className="min-h-screen bg-background">
@@ -56,13 +60,16 @@ const AdminDashboardSelector = () => {
           </Card>
         )}
 
-        {/* Seção Admin Delivery (Plano 3) */}
-        {isAdminDelivery && userPlan === 'premium' && (
+        {/* Seção Admin Delivery (Plano 3 - Premium) */}
+        {showPremiumPanel && (
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4">
               <Truck className="w-6 h-6 text-blue-600" />
-              <h2 className="text-xl font-bold text-blue-600">Painel de Delivery</h2>
+              <h2 className="text-xl font-bold text-blue-600">Painel de Delivery Premium</h2>
               <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">Plano 3</span>
+              {isAdminMaster && (
+                <span className="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded">Acesso Master</span>
+              )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <Link to="/admin/orders">
@@ -171,12 +178,20 @@ const AdminDashboardSelector = () => {
             <p className="text-purple-700 mb-4">
               Você tem acesso ao painel de administrador master com controle total sobre o aplicativo.
             </p>
-            <Link to="/admin/dashboard">
-              <Button className="bg-purple-600 hover:bg-purple-700 text-white">
-                <Crown className="w-4 h-4 mr-2" />
-                Acessar Painel Master
-              </Button>
-            </Link>
+            <div className="flex gap-4">
+              <Link to="/admin/dashboard">
+                <Button className="bg-purple-600 hover:bg-purple-700 text-white">
+                  <Crown className="w-4 h-4 mr-2" />
+                  Acessar Painel Master
+                </Button>
+              </Link>
+              <Link to="/admin/level-config">
+                <Button variant="outline" className="border-purple-600 text-purple-600 hover:bg-purple-50">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Configurar Níveis
+                </Button>
+              </Link>
+            </div>
           </div>
         )}
 

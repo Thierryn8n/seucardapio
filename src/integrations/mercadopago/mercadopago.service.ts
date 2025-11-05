@@ -54,14 +54,24 @@ class MercadoPagoService {
   }
 
   private async loadConfig() {
-    const { data, error } = await supabase
-      .from("settings")
-      .select("mercado_pago_access_token, mercado_pago_public_key")
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from("settings")
+        .select("mercado_pago_access_token, mercado_pago_public_key")
+        .limit(1)
+        .single();
 
-    if (data) {
-      this.accessToken = data.mercado_pago_access_token;
-      this.publicKey = data.mercado_pago_public_key;
+      if (error) {
+        console.warn("Configurações do Mercado Pago não encontradas:", error.message);
+        return;
+      }
+
+      if (data) {
+        this.accessToken = data.mercado_pago_access_token;
+        this.publicKey = data.mercado_pago_public_key;
+      }
+    } catch (error) {
+      console.warn("Erro ao carregar configurações do Mercado Pago:", error);
     }
   }
 

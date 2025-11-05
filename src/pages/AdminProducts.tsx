@@ -77,26 +77,6 @@ const AdminProducts = () => {
           description: "Produto atualizado com sucesso!"
         });
       } else {
-        // Verificar restrições do plano
-        if (!planRestrictions.canAccessDelivery) {
-          toast({
-            title: "Acesso Restrito",
-            description: planRestrictions.restrictionReason || "Seu plano não permite criar produtos.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        // Verificar limite de produtos
-        if (planRestrictions.maxProducts > 0 && products.length >= planRestrictions.maxProducts) {
-          toast({
-            title: "Limite Atingido",
-            description: `Seu plano permite no máximo ${planRestrictions.maxProducts} produtos.`,
-            variant: "destructive",
-          });
-          return;
-        }
-
         await createProduct(productData);
         toast({
           title: "Produto criado",
@@ -176,7 +156,6 @@ const AdminProducts = () => {
               <Button 
                 onClick={() => setIsDialogOpen(true)}
                 className="bg-orange-500 hover:bg-orange-600"
-                disabled={!planRestrictions.canAccessDelivery || (planRestrictions.maxProducts > 0 && products.length >= planRestrictions.maxProducts)}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Produto

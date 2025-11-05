@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { UtensilsCrossed, ChevronLeft, ChevronRight, Camera, FileText, Settings, MessageSquare, X } from "lucide-react";
+import { UtensilsCrossed, ChevronLeft, ChevronRight, Camera, FileText, Settings, MessageSquare, X, ShoppingCart, Package } from "lucide-react";
 import { format, addDays, startOfWeek, addWeeks } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import clsx from "clsx";
@@ -13,6 +13,11 @@ import jsPDF from "jspdf";
 import { useSettings } from "@/hooks/useSettings";
 import Background from "@/components/Background";
 import { MealSuggestions } from "@/components/MealSuggestions";
+import { useProducts } from "@/hooks/useDelivery";
+import { TransformedProductCard } from "@/components/TransformedProductCard";
+import { CartDrawer } from "@/components/CartDrawer";
+import { CartProvider, useCart } from "@/hooks/useCart";
+import "@/styles/animations.css";
 
 // Interfaces
 interface Meal {
@@ -28,6 +33,18 @@ interface Day {
   date: Date;
   meals: Meal[];
   visible?: boolean;
+}
+
+interface TransformedProduct {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  promotionalPrice?: number;
+  image_url?: string;
+  category: string;
+  rating?: number;
+  preparation_time?: string;
 }
 
 // Configurações para tipos de refeição
@@ -80,10 +97,10 @@ const getMealType = (mealNumber: number): "breakfast" | "lunch" | "dinner" | "sn
   }
 };
 
-const Menu = () => {
+const MenuContent = () => {
   const { id } = useParams();
   const { settings } = useSettings();
-  const { isAdmin } = useAuth();
+  const { isAdmin, userPlan } = useAuth();
   const exportRef = useRef(null);
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
     return startOfWeek(new Date(), { weekStartsOn: 0 });
@@ -98,6 +115,11 @@ const Menu = () => {
     format: 'png' as 'png' | 'pdf' | 'txt',
     emojiStyle: 'modern' as 'modern' | 'classic' | 'minimal'
   });
+  
+  // Estados para produtos transformados e carrinho
+  const [selectedTransformedProduct, setSelectedTransformedProduct] = useState<TransformedProduct | null>(null);
+  const [showCart, setShowCart] = useState(false);
+  const { itemCount } = useCart();
   
   // Logos do aplicativo
   const logoColorido = "/logo -seu cardapio- para fundo bege.png";
@@ -116,6 +138,12 @@ const Menu = () => {
   };
 
   const { toast } = useToast();
+
+  // Buscar produtos disponíveis
+  const { data: products = [] } = useProducts();
+  
+  // Filtrar produtos transformados e disponíveis
+  const transformedProducts = products.filter(product => product.available);
 
   const { data: menus = [], isLoading } = useQuery({
     queryKey: ["menus", currentWeekStart, id],
@@ -158,9 +186,73 @@ const Menu = () => {
   });
 
   // Componente para exibir um card de refeição
-  const MealCard = ({ meal }: { meal: Meal }) => {
+  const MealCard = ({ meal, day, onTransformToProduct }: { meal: Meal; day: Day; onTransformToProduct?: (product: TransformedProduct) => void }) => {
     const config = mealTypeConfig[meal.type];
     
+    // Verificar se há um produto transformado para esta refeição
+    const relatedProduct = transformedProducts.find(product => 
+      product.name.toLowerCase().includes(meal.title.toLowerCase()) ||
+      product.description.toLowerCase().includes(meal.description.toLowerCase())
+    );
+    
+    // Se houver produto transformado, mostrar o card de produto
+    if (relatedProduct && onTransformToProduct) {
+      return (
+        <div 
+                  className="group relative overflow-hidden rounded-xl bg-white/10 backdrop-blur-sm shadow-md transition-all hover:shadow-lg cursor-pointer"
+                  onClick={() => onTransformToProduct({
+                    id: relatedProduct.id,
+                    name: relatedProduct.name,
+                    description: relatedProduct.description || meal.description,
+                    price: relatedProduct.price,
+                    image_url: relatedProduct.image_url || meal.image_url,
+                    category: relatedProduct.category || config.label,
+                    preparation_time: "40 minutos"
+                  })}
+                >
+                  <div className="absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100 bg-gradient-to-r from-green-500 to-emerald-500 mix-blend-overlay"></div>
+          
+          <div className="absolute top-2 right-2">
+            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800`}>
+              <Package className="w-3 h-3 mr-1" />
+              Produto
+            </span>
+          </div>
+          
+          <div className="flex">
+            {relatedProduct.image_url || meal.image_url ? (
+              <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden">
+                <img 
+                  src={relatedProduct.image_url || meal.image_url} 
+                  alt={relatedProduct.name}
+                  className="h-full w-full object-cover transition-transform group-hover:scale-110"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "https://placehold.co/100x100/orange/white?text=Sem+Imagem";
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center bg-gradient-to-br from-amber-50 to-orange-100">
+                <Package className="h-10 w-10 text-orange-300" />
+              </div>
+            )}
+            
+            <div className="flex flex-1 flex-col p-3">
+              <h3 className="font-medium text-gray-900 line-clamp-1">{relatedProduct.name}</h3>
+              <p className="mt-1 text-sm text-gray-500 line-clamp-2">{relatedProduct.description}</p>
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-lg font-bold text-green-600">
+                  R$ {relatedProduct.price.toFixed(2)}
+                </span>
+                <span className="text-xs text-gray-500">Clique para ver detalhes</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    // Card de refeição normal
     return (
       <div className="group relative overflow-hidden rounded-xl bg-white/10 backdrop-blur-sm shadow-md transition-all hover:shadow-lg">
         <div className={`absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100 bg-gradient-to-r ${config.gradient} mix-blend-overlay`}></div>
@@ -193,10 +285,11 @@ const Menu = () => {
             <h3 className="font-medium text-gray-900 line-clamp-1">{meal.title}</h3>
             <p className="mt-1 text-sm text-gray-500 line-clamp-2">{meal.description}</p>
           </div>
-        </div>
       </div>
-    );
-  };
+      
+    </div>
+  );
+};
 
   // Componente para exibir um card de dia vazio
   const EmptyDayCard = () => (
@@ -214,6 +307,19 @@ const Menu = () => {
     const dayName = format(day.date, 'EEEE', { locale: ptBR });
     const dayNumber = format(day.date, 'd', { locale: ptBR });
     const monthName = format(day.date, 'MMMM', { locale: ptBR });
+
+    const handleTransformToProduct = (product: TransformedProduct) => {
+      setSelectedTransformedProduct(product);
+    };
+
+    // Verificar se há produtos transformados para este dia
+    const dayTransformedProducts = transformedProducts.filter(product => {
+      // Verificar se o produto está relacionado a alguma refeição do dia
+      return day.meals.some(meal => 
+        product.name.toLowerCase().includes(meal.title.toLowerCase()) ||
+        product.description.toLowerCase().includes(meal.description.toLowerCase())
+      );
+    });
     
     return (
       <div className="overflow-hidden rounded-xl bg-white/10 backdrop-blur-sm shadow-md">
@@ -232,11 +338,62 @@ const Menu = () => {
             <div className="flex justify-center p-4">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-orange-500 border-t-transparent"></div>
             </div>
+          ) : dayTransformedProducts.length > 0 ? (
+            // Se houver produtos transformados, mostrar apenas eles
+            <div className="space-y-3">
+              {dayTransformedProducts.map(product => (
+                <div 
+                    key={product.id}
+                    className="group relative overflow-hidden rounded-xl bg-white/10 backdrop-blur-sm shadow-md transition-all hover:shadow-lg cursor-pointer"
+                    onClick={() => handleTransformToProduct(product)}
+                  >
+                    <div className="absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100 bg-gradient-to-r from-green-500 to-emerald-500 mix-blend-overlay"></div>
+                    
+                    <div className="absolute top-2 right-2">
+                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800">
+                        <Package className="w-3 h-3 mr-1" />
+                        Produto
+                      </span>
+                    </div>
+                  
+                  <div className="flex">
+                    {product.image_url ? (
+                      <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden">
+                        <img 
+                          src={product.image_url} 
+                          alt={product.name}
+                          className="h-full w-full object-cover transition-transform group-hover:scale-110"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = "https://placehold.co/100x100/orange/white?text=Sem+Imagem";
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
+                        <Package className="h-10 w-10 text-green-300" />
+                      </div>
+                    )}
+                    
+                    <div className="flex flex-1 flex-col p-3">
+                      <h3 className="font-medium text-gray-900 line-clamp-1">{product.name}</h3>
+                      <p className="mt-1 text-sm text-gray-500 line-clamp-2">{product.description}</p>
+                      <div className="mt-2 flex items-center justify-between">
+                        <span className="text-lg font-bold text-green-600">
+                          R$ {product.price.toFixed(2)}
+                        </span>
+                        <span className="text-xs text-gray-500">Clique para ver detalhes</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : day.meals.length > 0 ? (
+            // Se não houver produtos transformados, mostrar as refeições normais
             <ul className="space-y-3">
               {day.meals.map(meal => (
                 <li key={meal.id}>
-                  <MealCard meal={meal} />
+                  <MealCard meal={meal} day={day} onTransformToProduct={handleTransformToProduct} />
                 </li>
               ))}
             </ul>
@@ -953,25 +1110,63 @@ const Menu = () => {
         />
       )}
 
-      {/* Badge flutuante: Criado por + Crie o seu também */}
-      <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2">
-        <Link
-          to="/"
-          className="flex items-center gap-2 rounded-full border bg-white/20 backdrop-blur-sm px-3 py-1 text-xs shadow-sm hover:bg-white/30"
-          title="Criado por Seu Cardápio"
-        >
-          <span className="text-gray-700">Criado por</span>
-          <img src={logoColorido} alt="Seu Cardápio" className="h-[1.5rem] w-auto" />
-        </Link>
-        <Link
-          to="/auth"
-          className="rounded-full border bg-orange-500/90 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-orange-500"
-          title="Crie o seu também"
-        >
-          Crie o seu também
-        </Link>
-      </div>
+      {/* Badge flutuante: Criado por + Crie o seu também - oculto para níveis 2 e 3 */}
+      {userPlan !== 'professional' && userPlan !== 'premium' && (
+        <div className="fixed bottom-20 right-4 z-40 flex items-center gap-2">
+          <Link
+            to="/"
+            className="flex items-center gap-2 rounded-full border bg-white/20 backdrop-blur-sm px-3 py-1 text-xs shadow-sm hover:bg-white/30"
+            title="Criado por Seu Cardápio"
+          >
+            <span className="text-gray-700">Criado por</span>
+            <img src={logoColorido} alt="Seu Cardápio" className="h-[1.5rem] w-auto" />
+          </Link>
+          <Link
+            to="/auth"
+            className="rounded-full border bg-orange-500/90 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-orange-500"
+            title="Crie o seu também"
+          >
+            Crie o seu também
+          </Link>
+        </div>
+      )}
+      
+      {/* Botão fixo do carrinho */}
+      <button
+        onClick={() => setShowCart(true)}
+        className="fixed bottom-6 right-6 bg-orange-500 hover:bg-orange-600 text-white rounded-full p-4 shadow-lg transition-all duration-200 hover:scale-110 z-50"
+      >
+        <ShoppingCart className="h-6 w-6" />
+        {itemCount > 0 && (
+          <span className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold">
+            {itemCount}
+          </span>
+        )}
+      </button>
+      
+      {/* Card do produto transformado (desliza de baixo para cima) */}
+      {selectedTransformedProduct && (
+        <TransformedProductCard
+          product={selectedTransformedProduct}
+          onClose={() => setSelectedTransformedProduct(null)}
+          onAddToCart={() => setSelectedTransformedProduct(null)}
+        />
+      )}
+      
+      {/* Carrinho (desliza de baixo para cima) */}
+      <CartDrawer
+        isOpen={showCart}
+        onClose={() => setShowCart(false)}
+      />
     </div>
+  );
+};
+
+const Menu = () => {
+  return (
+    <CartProvider>
+      <MenuContent />
+    </CartProvider>
   );
 };
 

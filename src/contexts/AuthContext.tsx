@@ -16,6 +16,24 @@ interface AuthContextType {
   isAdminDelivery: boolean;
   userPlan: 'free' | 'professional' | 'premium' | null;
   updateUserRole: (userId: string, newRole: string) => Promise<{ success: boolean; error?: any }>;
+  levelConfigs: LevelConfig[] | null;
+  refreshLevelConfigs: () => Promise<void>;
+  getPanelForPlan: (plan: string) => 'simple' | 'master' | null;
+}
+
+interface LevelConfig {
+  id: string;
+  plan_name: string;
+  plan_display_name: string;
+  access_level: number;
+  panel_type: 'simple' | 'master';
+  delivery_features: boolean;
+  menu_management: boolean;
+  user_management: boolean;
+  system_config: boolean;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,6 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAdminMaster, setIsAdminMaster] = useState(false);
   const [isAdminDelivery, setIsAdminDelivery] = useState(false);
   const [userPlan, setUserPlan] = useState<'free' | 'professional' | 'premium' | null>(null);
+  const [levelConfigs, setLevelConfigs] = useState<LevelConfig[] | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,12 +61,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setTimeout(() => {
             checkAdminStatus(session.user.id);
             checkUserSubscription(session.user.id);
+            refreshLevelConfigs();
           }, 0);
         } else {
           setIsAdmin(false);
           setIsAdminMaster(false);
           setIsAdminDelivery(false);
           setUserPlan(null);
+          setLevelConfigs(null);
         }
       }
     );
@@ -59,6 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         checkAdminStatus(session.user.id);
         checkUserSubscription(session.user.id);
+        refreshLevelConfigs();
       } else {
         setIsAdminMaster(false);
         setIsAdminDelivery(false);
@@ -138,15 +160,137 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const checkUserSubscription = async (userId: string) => {
     // Get user subscription plan
-    const { data: subscription } = await supabase
-      .from('subscriptions')
-      .select('plan')
-      .eq('user_id', userId)
-      .single();
-    
-    if (subscription) {
-      setUserPlan(subscription.plan as 'free' | 'professional' | 'premium');
+    try {
+      const { data: subscription, error } = await supabase
+        .from('subscriptions')
+        .select('plan')
+        .eq('user_id', userId);
+      
+      if (error) {
+        console.error('Erro ao buscar subscription:', error);
+        setUserPlan('free');
+        return;
+      }
+      
+      if (subscription && subscription.length > 0) {
+        setUserPlan(subscription[0].plan as 'free' | 'professional' | 'premium');
+      } else {
+        // Se não houver subscription, assumir plano free
+        setUserPlan('free');
+      }
+    } catch (error) {
+      console.error('Erro ao verificar subscription:', error);
+      setUserPlan('free'); // Fallback para free em caso de erro
     }
+  };
+
+  const refreshLevelConfigs = async () => {
+    try {
+      // Tentar buscar configurações da tabela plan_level_configs
+      const { data, error } = await supabase
+        .from('plan_level_configs')
+        .select('*')
+        .eq('active', true)
+        .order('access_level', { ascending: true });
+
+      if (error) {
+        console.warn('Configurações de níveis não encontradas, usando padrões:', error.message);
+      }
+
+      if (data && data.length > 0) {
+        setLevelConfigs(data as LevelConfig[]);
+      } else {
+        // Usar configurações padrão
+        const defaultConfigs: LevelConfig[] = [
+          {
+            id: 'free-config',
+            plan_name: 'free',
+            plan_display_name: 'Gratuito',
+            access_level: 1,
+            panel_type: 'simple',
+            delivery_features: false,
+            menu_management: true,
+            user_management: false,
+            system_config: false,
+            active: true
+          },
+          {
+            id: 'professional-config',
+            plan_name: 'professional',
+            plan_display_name: 'Profissional',
+            access_level: 2,
+            panel_type: 'simple',
+            delivery_features: false,
+            menu_management: true,
+            user_management: false,
+            system_config: false,
+            active: true
+          },
+          {
+            id: 'premium-config',
+            plan_name: 'premium',
+            plan_display_name: 'Premium',
+            access_level: 3,
+            panel_type: 'master',
+            delivery_features: true,
+            menu_management: true,
+            user_management: true,
+            system_config: true,
+            active: true
+          }
+        ];
+        setLevelConfigs(defaultConfigs);
+      }
+    } catch (error) {
+      console.warn('Erro ao buscar configurações de níveis, usando padrões:', error);
+      // Em caso de erro, usar configurações padrão
+      const defaultConfigs: LevelConfig[] = [
+        {
+          id: 'free-config',
+          plan_name: 'free',
+          plan_display_name: 'Gratuito',
+          access_level: 1,
+          panel_type: 'simple',
+          delivery_features: false,
+          menu_management: true,
+          user_management: false,
+          system_config: false,
+          active: true
+        },
+        {
+          id: 'professional-config',
+          plan_name: 'professional',
+          plan_display_name: 'Profissional',
+          access_level: 2,
+          panel_type: 'simple',
+          delivery_features: false,
+          menu_management: true,
+          user_management: false,
+          system_config: false,
+          active: true
+        },
+        {
+          id: 'premium-config',
+          plan_name: 'premium',
+          plan_display_name: 'Premium',
+          access_level: 3,
+          panel_type: 'master',
+          delivery_features: true,
+          menu_management: true,
+          user_management: true,
+          system_config: true,
+          active: true
+        }
+      ];
+      setLevelConfigs(defaultConfigs);
+    }
+  };
+
+  const getPanelForPlan = (plan: string): 'simple' | 'master' | null => {
+    if (!levelConfigs) return null;
+    
+    const config = levelConfigs.find(config => config.plan_name === plan && config.active);
+    return config ? config.panel_type : null;
   };
 
   const signIn = async (email: string, password: string) => {
@@ -183,6 +327,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsAdminMaster(false);
     setIsAdminDelivery(false);
     setUserPlan(null);
+    setLevelConfigs(null);
     navigate('/');
   };
 
@@ -218,7 +363,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, isAdmin, isAdminMaster, isAdminDelivery, userPlan, updateUserRole }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, isAdmin, isAdminMaster, isAdminDelivery, userPlan, updateUserRole, levelConfigs, refreshLevelConfigs, getPanelForPlan }}>
       {children}
     </AuthContext.Provider>
   );

@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Trash2, Plus, Download, Link2, Copy, Image, Upload, Camera, Loader2 } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Plus, Download, Link2, Copy, Image, Upload, Camera, Loader2, Package, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -28,6 +28,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useProducts } from "@/hooks/useDelivery";
 
 interface Menu {
   id: string;
@@ -43,10 +44,11 @@ const mealLabels = ["Café da Manhã", "Almoço", "Lanche", "Jantar"];
 const weekDays = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
 const AdminMenus = () => {
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isAdmin, loading, userPlan } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { createProduct } = useProducts();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [showTranscribeDialog, setShowTranscribeDialog] = useState(false);
@@ -75,6 +77,186 @@ const AdminMenus = () => {
     },
     enabled: !!user && isAdmin,
   });
+
+  // Verificar se é nível 3 (premium) para habilitar transformação em produto
+  const isLevel3 = userPlan === 'premium';
+
+  // Função para validar a consistência entre menu e produto transformado
+  const validateMenuProductConsistency = (menu: Menu, product: Product) => {
+    const weekStart = new Date(menu.week_start_date);
+    const expectedMealDate = new Date(weekStart);
+    expectedMealDate.setDate(weekStart.getDate() + menu.day_of_week);
+    
+    const productCreatedDate = new Date(product.created_at);
+    
+    const validation = {
+      datesMatch: productCreatedDate.getTime() === expectedMealDate.getTime(),
+      expectedDate: expectedMealDate.toISOString(),
+      actualDate: product.created_at,
+      menuName: menu.meal_name,
+      productName: product.name,
+      menuId: menu.id,
+      productId: product.id
+    };
+    
+    console.log("Validação de consistência Menu-Produto:", validation);
+    
+    return validation;
+  };
+
+  // Função para verificar a consistência de todos os produtos transformados
+  const validateAllTransformedProducts = async () => {
+    try {
+      console.log("Iniciando validação de todos os produtos transformados...");
+      
+      // Obter todos os produtos que podem ter sido transformados de menus
+      const { data: products, error: productsError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('user_id', user!.id)
+        .order('created_at', { ascending: false });
+
+      if (productsError) throw productsError;
+
+      // Obter todos os menus
+      const { data: menus, error: menusError } = await supabase
+        .from('menus')
+        .select('*')
+        .eq('user_id', user!.id)
+        .order('week_start_date', { ascending: false });
+
+      if (menusError) throw menusError;
+
+      const validations = [];
+      let inconsistentCount = 0;
+
+      // Verificar cada produto contra os menus
+      products?.forEach(product => {
+        // Procurar menu correspondente pelo nome e data
+        const matchingMenu = menus?.find(menu => {
+          const weekStart = new Date(menu.week_start_date);
+          const mealDate = new Date(weekStart);
+          mealDate.setDate(weekStart.getDate() + menu.day_of_week);
+          
+          return menu.meal_name === product.name && 
+                 mealDate.toISOString() === product.created_at;
+        });
+
+        if (matchingMenu) {
+          const validation = validateMenuProductConsistency(matchingMenu, product);
+          validations.push(validation);
+          
+          if (!validation.datesMatch) {
+            inconsistentCount++;
+          }
+        }
+      });
+
+      console.log(`Validação concluída: ${validations.length} produtos transformados encontrados, ${inconsistentCount} inconsistentes`);
+      
+      if (inconsistentCount > 0) {
+        toast({
+          title: "Atenção: Inconsistências encontradas",
+          description: `${inconsistentCount} produtos transformados têm datas inconsistentes com os menus originais. Verifique o console para detalhes.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Validação concluída",
+          description: `Todos os ${validations.length} produtos transformados estão consistentes com os menus originais.`,
+        });
+      }
+
+      return validations;
+    } catch (error) {
+      console.error("Erro ao validar produtos transformados:", error);
+      toast({
+        title: "Erro na validação",
+        description: "Não foi possível validar a consistência dos produtos transformados.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const transformToProduct = async (menu: Menu) => {
+    try {
+      // Validação dos dados do menu
+      if (!menu.week_start_date || menu.day_of_week === undefined) {
+        throw new Error("Dados do menu incompletos: week_start_date ou day_of_week ausentes");
+      }
+
+      // Calcular a data exata da refeição
+      const weekStart = new Date(menu.week_start_date);
+      const mealDate = new Date(weekStart);
+      mealDate.setDate(weekStart.getDate() + menu.day_of_week);
+      
+      // Formatar a data para ISO string
+      const mealDateISO = mealDate.toISOString();
+      
+      console.log("Transformando menu em produto:", {
+        menuName: menu.meal_name,
+        weekStartDate: menu.week_start_date,
+        dayOfWeek: menu.day_of_week,
+        calculatedMealDate: mealDateISO,
+        menuId: menu.id
+      });
+
+      const productData = {
+        name: menu.meal_name,
+        description: menu.description || `Refeição do ${weekDays[menu.day_of_week]} - ${mealLabels[menu.meal_number - 1]}`,
+        price: 0, // Preço padrão, pode ser editado depois
+        category: mealLabels[menu.meal_number - 1],
+        available: true,
+        image_url: menu.image_url || '',
+        user_id: user!.id,
+        created_at: mealDateISO // Usar a data da refeição, não a data atual
+      };
+
+      // Criar o produto com a data do menu
+      const createdProduct = await createProduct(productData);
+      
+      // Validação pós-criação
+      if (createdProduct && createdProduct.created_at) {
+        const createdDate = new Date(createdProduct.created_at);
+        const expectedDate = new Date(mealDateISO);
+        
+        console.log("Produto criado com sucesso:", {
+          productId: createdProduct.id,
+          productName: createdProduct.name,
+          createdAt: createdProduct.created_at,
+          expectedDate: mealDateISO,
+          datesMatch: createdDate.getTime() === expectedDate.getTime()
+        });
+        
+        // Validar consistência
+        const validation = validateMenuProductConsistency(menu, createdProduct);
+        
+        if (!validation.datesMatch) {
+          console.warn("Atenção: A data do produto não corresponde exatamente à data esperada do menu");
+          toast({
+            title: "Aviso de consistência",
+            description: "A data do produto criado não corresponde exatamente à data do menu. Verifique os logs para mais detalhes.",
+            variant: "destructive",
+          });
+        }
+      }
+      
+      toast({
+        title: "Menu transformado em produto!",
+        description: `"${menu.meal_name}" foi adicionado aos produtos de delivery com a data do menu (${format(mealDate, 'dd/MM/yyyy', { locale: ptBR })}).`,
+      });
+      
+      // Navegar para a página de produtos após criar
+      setTimeout(() => navigate("/admin/products"), 1500);
+    } catch (error) {
+      console.error("Erro ao transformar menu em produto:", error);
+      toast({
+        title: "Erro ao transformar em produto",
+        description: error instanceof Error ? error.message : "Não foi possível transformar o menu em produto.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const duplicateMutation = useMutation({
     mutationFn: async (menuId: string) => {
@@ -392,10 +574,22 @@ const AdminMenus = () => {
                 </Button>
                 <Link to="/admin/menus/new">
                   <Button className="gap-2">
-                    <Plus className="w-4 h-4" />
-                    Novo
-                  </Button>
-                </Link>
+                  <Plus className="w-4 h-4" />
+                  Novo
+                </Button>
+              </Link>
+              {isLevel3 && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={validateAllTransformedProducts}
+                  className="gap-2 bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                  title="Validar consistência dos produtos transformados"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Validar Produtos
+                </Button>
+              )}
               </div>
             </div>
             <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
@@ -413,6 +607,19 @@ const AdminMenus = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        {isLevel3 && (
+          <Card className="mb-6 border-blue-200 bg-blue-50">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-2">
+                <Package className="w-5 h-5 text-blue-600" />
+                <p className="text-sm text-blue-800">
+                  <strong>Funcionalidade Premium:</strong> Transforme seus cardápios em produtos de delivery com um clique! 
+                  Use o botão <Package className="w-4 h-4 inline" /> para converter refeições em produtos vendíveis.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         {!menus || menus.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
@@ -458,6 +665,17 @@ const AdminMenus = () => {
                     </p>
                   )}
                   <div className="flex gap-2 flex-wrap">
+                    {isLevel3 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => transformToProduct(menu)}
+                        title="Transformar em Produto"
+                        className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                      >
+                        <Package className="w-4 h-4" />
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"

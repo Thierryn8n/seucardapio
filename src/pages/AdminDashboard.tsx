@@ -101,7 +101,14 @@ const AdminDashboard = () => {
       color: "text-red-600"
     },
     {
-      title: "Configurações",
+      title: "Configurações de Níveis",
+      description: "Configure acessos por plano e nível",
+      icon: Settings,
+      path: "/admin/level-config",
+      color: "text-indigo-600"
+    },
+    {
+      title: "Configurações Gerais",
       description: "Configurações do sistema",
       icon: Settings,
       path: "/admin/settings",

@@ -12,7 +12,7 @@ import { useState } from "react";
 
 const AdminPlans = () => {
   const navigate = useNavigate();
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, isAdminMaster, isAdminDelivery } = useAuth();
   const { subscription, isLoading } = useSubscription();
   const { isValid, planStatus, validatePlan } = usePlanValidation();
   const { toast } = useToast();
@@ -52,6 +52,26 @@ const AdminPlans = () => {
             className="mt-4 bg-orange-500 hover:bg-orange-600"
           >
             Voltar para Home
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Verificar se é admin master para acessar esta página
+  if (!isAdminMaster) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900">Acesso Restrito</h1>
+          <p className="mt-2 text-gray-600">
+            {isAdminDelivery ? "❌ Admin não consegue ver configurações de outros usuários" : "Apenas administradores master podem acessar esta página."}
+          </p>
+          <Button 
+            onClick={() => navigate("/admin")}
+            className="mt-4 bg-orange-500 hover:bg-orange-600"
+          >
+            Voltar ao Painel
           </Button>
         </div>
       </div>
