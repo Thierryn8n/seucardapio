@@ -162,7 +162,7 @@ const Menu = () => {
     const config = mealTypeConfig[meal.type];
     
     return (
-      <div className="group relative overflow-hidden rounded-xl bg-white shadow-md transition-all hover:shadow-lg">
+      <div className="group relative overflow-hidden rounded-xl bg-white/10 backdrop-blur-sm shadow-md transition-all hover:shadow-lg">
         <div className={`absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100 bg-gradient-to-r ${config.gradient} mix-blend-overlay`}></div>
         
         <div className="absolute top-2 right-2">
@@ -200,8 +200,8 @@ const Menu = () => {
 
   // Componente para exibir um card de dia vazio
   const EmptyDayCard = () => (
-    <div className="flex flex-col items-center justify-center rounded-xl bg-gradient-to-b from-blue-50 to-blue-100 p-6 text-center">
-      <div className="mb-3 rounded-full bg-white p-3 shadow-sm">
+    <div className="flex flex-col items-center justify-center rounded-xl bg-gradient-to-b from-blue-50/20 to-blue-100/20 backdrop-blur-sm p-6 text-center">
+      <div className="mb-3 rounded-full bg-white/20 backdrop-blur-sm p-3 shadow-sm">
         <UtensilsCrossed className="h-8 w-8 text-blue-300" />
       </div>
       <h3 className="text-lg font-medium text-gray-700">Nenhum cardápio cadastrado para este dia</h3>
@@ -216,9 +216,9 @@ const Menu = () => {
     const monthName = format(day.date, 'MMMM', { locale: ptBR });
     
     return (
-      <div className="overflow-hidden rounded-xl bg-white shadow-md">
+      <div className="overflow-hidden rounded-xl bg-white/10 backdrop-blur-sm shadow-md">
         <div className="flex items-center border-l-4 border-orange-500 bg-gradient-to-r from-orange-50 to-transparent p-4">
-          <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm">
+          <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm shadow-sm">
             <span className="text-lg font-bold text-gray-700">{dayNumber}</span>
           </div>
           <div>
@@ -647,7 +647,7 @@ const Menu = () => {
   const PersonalizationModal = () => {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
+        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900">Personalizar Exportação</h2>
             <button
@@ -755,7 +755,7 @@ const Menu = () => {
         </div>
         
         {/* Barra de navegação fixa */}
-        <div className="sticky top-2 sm:top-4 z-40 mb-4 sm:mb-6 w-full flex flex-col sm:flex-row items-center sm:items-center justify-evenly sm:justify-between rounded-xl bg-white/80 p-2 sm:p-3 shadow-md backdrop-blur-md gap-2 text-center">
+        <div className="sticky top-2 sm:top-4 z-40 mb-4 sm:mb-6 w-full flex flex-col sm:flex-row items-center sm:items-center justify-evenly sm:justify-between rounded-xl bg-white/10 backdrop-blur-md p-2 sm:p-3 shadow-md gap-2 text-center">
           <div className="w-full sm:w-auto flex items-center justify-center flex-wrap gap-2 sm:gap-1">
             <button
               onClick={goToPreviousWeek}
@@ -821,7 +821,7 @@ const Menu = () => {
               </button>
               
               {showWhatsAppOptions && (
-                <div className="absolute right-0 mt-2 w-40 sm:w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                <div className="absolute right-0 mt-2 w-40 sm:w-48 bg-white/90 backdrop-blur-md rounded-lg shadow-lg border border-gray-200 z-50">
                   <div className="py-1">
                     <button
                       onClick={() => handleWhatsAppShare('png')}
@@ -882,7 +882,7 @@ const Menu = () => {
       <div id="export-container" className="fixed left-[-9999px] top-[-9999px] hidden">
         <div
           ref={exportRef}
-          className="w-[800px] bg-white p-8"
+          className="w-[800px] bg-white/10 backdrop-blur-sm p-8"
           style={{ fontFamily: "system-ui, sans-serif" }}
         >
           <div className="mb-6 flex items-center justify-between">
@@ -912,8 +912,8 @@ const Menu = () => {
           
           <div className="grid grid-cols-7 gap-4">
             {days.map((day, index) => (
-              <div key={index} className="rounded border border-gray-200 bg-white">
-                <div className="border-b border-gray-200 bg-gray-50 p-2">
+              <div key={index} className="rounded border border-gray-200 bg-white/10 backdrop-blur-sm">
+                <div className="border-b border-gray-200 bg-gray-50/20 backdrop-blur-sm p-2">
                   <h3 className="text-center font-medium capitalize text-gray-900">
                     {format(day.date, 'EEEE', { locale: ptBR })}
                   </h3>
@@ -957,7 +957,7 @@ const Menu = () => {
       <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2">
         <Link
           to="/"
-          className="flex items-center gap-2 rounded-full border bg-white/90 px-3 py-1 text-xs shadow-sm backdrop-blur hover:bg-white"
+          className="flex items-center gap-2 rounded-full border bg-white/20 backdrop-blur-sm px-3 py-1 text-xs shadow-sm hover:bg-white/30"
           title="Criado por Seu Cardápio"
         >
           <span className="text-gray-700">Criado por</span>

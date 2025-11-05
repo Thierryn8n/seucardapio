@@ -18,10 +18,10 @@ const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Redirect if already logged in (avoid navigating during render)
+  // Redirecionar para o seletor de painéis se já estiver logado
   useEffect(() => {
     if (user) {
-      navigate("/admin");
+      navigate("/admin/selector");
     }
   }, [user, navigate]);
 
