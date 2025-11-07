@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { UtensilsCrossed, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { UtensilsCrossed, Sparkles, ShoppingCart, CheckCircle } from "lucide-react";
 
 interface MealCardProps {
   mealNumber: number;
@@ -13,6 +14,12 @@ interface MealCardProps {
     carbs: number;
     fat: number;
   };
+  product?: {
+    id: string;
+    price: number;
+    available: boolean;
+  };
+  cartEnabled?: boolean;
 }
 
 const mealLabels = ["Café da Manhã", "Almoço", "Lanche", "Jantar"];
@@ -23,7 +30,7 @@ const mealGradients = [
   "from-purple-500/20 to-pink-500/20"
 ];
 
-export const MealCard = ({ mealNumber, mealName, description, imageUrl, calories, macros }: MealCardProps) => {
+export const MealCard = ({ mealNumber, mealName, description, imageUrl, calories, macros, product, cartEnabled = true }: MealCardProps) => {
   return (
     <Card className="group overflow-hidden transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 border-2 hover:border-primary/50 animate-fade-in">
       {imageUrl ? (
@@ -38,6 +45,12 @@ export const MealCard = ({ mealNumber, mealName, description, imageUrl, calories
             <Sparkles className="w-3 h-3 mr-1" />
             {mealLabels[mealNumber - 1]}
           </Badge>
+          {product && product.available && (
+            <Badge className="absolute top-3 right-3 bg-green-500/90 backdrop-blur-sm text-white font-semibold shadow-lg border border-white/20 group-hover:scale-110 transition-transform">
+              <CheckCircle className="w-3 h-3 mr-1" />
+              Disponível
+            </Badge>
+          )}
         </div>
       ) : (
         <div className={`relative h-52 bg-gradient-to-br ${mealGradients[mealNumber - 1]} flex items-center justify-center transition-all duration-500 group-hover:scale-105`}>
@@ -46,6 +59,12 @@ export const MealCard = ({ mealNumber, mealName, description, imageUrl, calories
             <Sparkles className="w-3 h-3 mr-1" />
             {mealLabels[mealNumber - 1]}
           </Badge>
+          {product && product.available && (
+            <Badge className="absolute top-3 right-3 bg-green-500/90 backdrop-blur-sm text-white font-semibold shadow-lg border border-white/20">
+              <CheckCircle className="w-3 h-3 mr-1" />
+              Disponível
+            </Badge>
+          )}
         </div>
       )}
       <CardContent className="p-5 space-y-2">
@@ -67,6 +86,29 @@ export const MealCard = ({ mealNumber, mealName, description, imageUrl, calories
                 <span>G: {macros.fat}g</span>
               </div>
             )}
+          </div>
+        )}
+        
+        {product && product.available && (
+          <div className="pt-3 border-t border-border/50">
+            <div className="flex items-center justify-between">
+              <span className="text-2xl font-bold text-green-600">
+                R$ {product.price.toFixed(2).replace('.', ',')}
+              </span>
+              <Button 
+                size="sm" 
+                className={cartEnabled ? "bg-green-600 hover:bg-green-700 text-white" : "bg-gray-400 text-gray-600 cursor-not-allowed"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Futura implementação do carrinho
+                  console.log('Adicionar ao carrinho:', product.id);
+                }}
+                disabled={!cartEnabled}
+              >
+                <ShoppingCart className="w-4 h-4 mr-1" />
+                {cartEnabled ? 'Pedir' : 'Carrinho Indisponível'}
+              </Button>
+            </div>
           </div>
         )}
       </CardContent>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProducts } from "@/hooks/useDelivery";
+import { useUserLevel } from "@/hooks/useUserLevel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,7 @@ const AdminProducts = () => {
   const { products, isLoading, createProduct, updateProduct, deleteProduct } = useProducts();
   const { toast } = useToast();
   const planRestrictions = usePlanRestrictions();
+  const { isLevel3 } = useUserLevel();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -104,16 +106,22 @@ const AdminProducts = () => {
   };
 
   const handleEdit = (product: any) => {
-    setEditingProduct(product);
-    setFormData({
-      name: product.name,
-      description: product.description || "",
-      price: product.price.toString(),
-      category: product.category || "",
-      available: product.available,
-      image_url: product.image_url || ""
-    });
-    setIsDialogOpen(true);
+    if (isLevel3) {
+      // Nível 3 usa o novo formulário com opções personalizadas
+      navigate(`/admin/products/${product.id}`);
+    } else {
+      // Níveis 1 e 2 usam o CRUD atual
+      setEditingProduct(product);
+      setFormData({
+        name: product.name,
+        description: product.description || "",
+        price: product.price.toString(),
+        category: product.category || "",
+        available: product.available,
+        image_url: product.image_url || ""
+      });
+      setIsDialogOpen(true);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -143,6 +151,11 @@ const AdminProducts = () => {
               <h1 className="text-3xl font-bold text-gray-900">Produtos</h1>
               <p className="mt-2 text-gray-600">
                 Gerencie os produtos do seu delivery
+                {isLevel3 && (
+                  <Badge variant="default" className="ml-2 bg-blue-100 text-blue-800">
+                    Modo Avançado (Nível 3)
+                  </Badge>
+                )}
               </p>
             </div>
             <div className="flex space-x-3">
@@ -154,7 +167,13 @@ const AdminProducts = () => {
                 Voltar
               </Button>
               <Button 
-                onClick={() => setIsDialogOpen(true)}
+                onClick={() => {
+                  if (isLevel3) {
+                    navigate("/admin/products/new");
+                  } else {
+                    setIsDialogOpen(true);
+                  }
+                }}
                 className="bg-orange-500 hover:bg-orange-600"
               >
                 <Plus className="h-4 w-4 mr-2" />

@@ -536,6 +536,11 @@ const CustomerDelivery: React.FC = () => {
                           <p className="text-sm text-gray-600">
                             R$ {cartItem.item.price.toFixed(2)} cada
                           </p>
+                          {cartItem.selectedOptions && cartItem.selectedOptions.length > 0 && (
+                            <p className="text-xs text-gray-600 mt-1">
+                              Opções: {cartItem.selectedOptions.map(opt => opt.name).join(', ')}
+                            </p>
+                          )}
                           {cartItem.observations && (
                             <p className="text-xs text-gray-500 mt-1">
                               Observações: {cartItem.observations}

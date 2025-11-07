@@ -1,5 +1,6 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { UtensilsCrossed, ChevronLeft, ChevronRight, Camera, FileText, Settings, MessageSquare, X, ShoppingCart, Package } from "lucide-react";
 import { format, addDays, startOfWeek, addWeeks } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -27,6 +28,8 @@ interface Meal {
   image_url?: string;
   type: "breakfast" | "lunch" | "dinner" | "snack";
   meal_number: number;
+  isProduct?: boolean;
+  price?: number;
 }
 
 interface Day {
@@ -87,6 +90,40 @@ const shouldShowDay = (dayIndex: number, settings?: Settings | null): boolean =>
   }
 };
 
+// Função para normalizar datas para o formato YYYY-MM-DD
+const normalizeDate = (date: string | Date): string => {
+  try {
+    if (typeof date === 'string') {
+      // Detectar formato DD/MM/YYYY e converter para YYYY-MM-DD
+      if (date.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+        const [day, month, year] = date.split('/');
+        return `${year}-${month}-${day}`;
+      }
+      // Se já estiver no formato YYYY-MM-DD, retornar como está
+      if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        return date;
+      }
+    }
+    
+    // Para objetos Date, formatar como YYYY-MM-DD
+    if (date instanceof Date) {
+      return format(date, 'yyyy-MM-dd');
+    }
+    
+    // Tentar converter string para Date e depois formatar
+    const dateObj = new Date(date);
+    if (!isNaN(dateObj.getTime())) {
+      return format(dateObj, 'yyyy-MM-dd');
+    }
+    
+    console.warn('Formato de data não reconhecido:', date);
+    return date.toString();
+  } catch (error) {
+    console.error('Erro ao normalizar data:', error, date);
+    return date.toString();
+  }
+};
+
 // Função para determinar o tipo de refeição com base no meal_number
 const getMealType = (mealNumber: number): "breakfast" | "lunch" | "dinner" | "snack" => {
   switch (mealNumber) {
@@ -101,10 +138,19 @@ const MenuContent = () => {
   const { id } = useParams();
   const { settings } = useSettings();
   const { isAdmin, userPlan } = useAuth();
+  const { isMasterAdmin } = useAdminStatus(settings?.user_id || '');
   const exportRef = useRef(null);
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
     return startOfWeek(new Date(), { weekStartsOn: 0 });
   });
+
+  // Log inicial para confirmar que o componente está sendo renderizado
+  console.log('=== MENU CONTENT RENDERIZADO ===');
+  console.log('ID do restaurante:', id);
+  console.log('Data inicial da semana:', format(currentWeekStart, 'yyyy-MM-dd'));
+  console.log('Configurações carregadas:', settings);
+  console.log('Nível do plano:', settings?.plan_level);
+  console.log('user_id das configurações:', settings?.user_id);
   
   // Estados para controles de interface
   const [showWhatsAppOptions, setShowWhatsAppOptions] = useState(false);
@@ -119,7 +165,7 @@ const MenuContent = () => {
   // Estados para produtos transformados e carrinho
   const [selectedTransformedProduct, setSelectedTransformedProduct] = useState<TransformedProduct | null>(null);
   const [showCart, setShowCart] = useState(false);
-  const { itemCount } = useCart();
+  const { items, total, itemCount } = useCart();
   
   // Logos do aplicativo
   const logoColorido = "/logo -seu cardapio- para fundo bege.png";
@@ -137,10 +183,139 @@ const MenuContent = () => {
     setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 0 }));
   };
 
+  // Log detalhado da data da semana atual
+  console.log(`📅 Data da semana atual:`, {
+    currentWeekStart: currentWeekStart,
+    formatted: format(currentWeekStart, "yyyy-MM-dd"),
+    dayOfWeek: currentWeekStart.getDay(),
+    timestamp: currentWeekStart.getTime()
+  });
+  
+  // Log do produto exemplo para comparação
+  console.log(`🎯 Dados do produto exemplo:`, {
+    id: 'fc799e06-dc4e-40b9-9f63-0f21ff3d6108',
+    user_id: 'e9ebc52f-3ddb-4a47-9bea-bae3fd2a75ba',
+    week_start_date: '2025-11-02',
+    day_of_week: 5,
+    meal_number: 2,
+    available: true
+  });
+
+  // Teste direto para verificar se o produto existe
+  useEffect(() => {
+    const testProductExists = async () => {
+      console.log(`🧪 TESTANDO EXISTÊNCIA DO PRODUTO...`);
+      
+      // Teste 1: Buscar pelo ID
+      const { data: byId, error: idError } = await supabase
+        .from("products")
+        .select("*")
+        .eq("id", "fc799e06-dc4e-40b9-9f63-0f21ff3d6108");
+      
+      console.log(`🔍 Busca por ID:`, { data: byId, error: idError });
+      
+      // Teste 2: Buscar pelo user_id e semana
+      const { data: byWeek, error: weekError } = await supabase
+        .from("products")
+        .select("*")
+        .eq("user_id", "e9ebc52f-3ddb-4a47-9bea-bae3fd2a75ba")
+        .eq("week_start_date", "2025-11-02");
+      
+      console.log(`📅 Busca por user_id e semana:`, { data: byWeek, error: weekError });
+      
+      // Teste 3: Buscar todos os produtos do user
+      const { data: allProducts, error: allError } = await supabase
+        .from("products")
+        .select("*")
+        .eq("user_id", "e9ebc52f-3ddb-4a47-9bea-bae3fd2a75ba");
+      
+      console.log(`📋 Todos os produtos do user:`, { data: allProducts, error: allError, count: allProducts?.length });
+    };
+    
+    testProductExists();
+  }, []);
+
   const { toast } = useToast();
 
   // Buscar produtos disponíveis
   const { data: products = [] } = useProducts();
+  
+  // Buscar produtos transformados da semana atual
+  const { data: weekProducts = [] } = useQuery({
+    queryKey: ["week-products", currentWeekStart, id],
+    queryFn: async () => {
+      const weekStart = format(currentWeekStart, "yyyy-MM-dd");
+      console.log(`🔍 Buscando produtos transformados para:`, {
+        user_id: id,
+        week_start_date: weekStart,
+        is_transformed: true
+      });
+      
+      // Primeiro tentar buscar com is_transformed = true
+      let { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("user_id", id)
+        .eq("week_start_date", weekStart)
+        .eq("is_transformed", true)
+        .order("day_of_week")
+        .order("meal_number");
+
+      // Se não encontrar nenhum produto transformado, tentar buscar todos os produtos da semana
+      if (!data || data.length === 0) {
+        console.log(`🔄 Nenhum produto transformado encontrado, tentando buscar todos os produtos da semana...`);
+        const { data: allProducts, error: allError } = await supabase
+          .from("products")
+          .select("*")
+          .eq("user_id", id)
+          .eq("week_start_date", weekStart)
+          .order("day_of_week")
+          .order("meal_number");
+        
+        console.log(`📦 Resultado da busca de todos os produtos:`, {
+          data: allProducts,
+          error: allError,
+          count: allProducts?.length
+        });
+        
+        data = allProducts;
+        error = allError;
+      }
+
+      console.log(`📦 Resultado final da busca de produtos:`, {
+        data: data,
+        error: error,
+        count: data?.length
+      });
+      
+      // Log específico para verificar o produto do exemplo
+      if (data && data.length > 0) {
+        const exampleProduct = data.find(p => p.id === 'fc799e06-dc4e-40b9-9f63-0f21ff3d6108');
+        if (exampleProduct) {
+          console.log(`✅ PRODUTO EXEMPLO ENCONTRADO:`, {
+            id: exampleProduct.id,
+            name: exampleProduct.name,
+            week_start_date: exampleProduct.week_start_date,
+            day_of_week: exampleProduct.day_of_week,
+            meal_number: exampleProduct.meal_number,
+            available: exampleProduct.available
+          });
+        } else {
+          console.log(`❌ PRODUTO EXEMPLO NÃO ENCONTRADO na lista de produtos retornados`);
+          console.log(`📋 Produtos retornados:`, data.map(p => ({
+            id: p.id,
+            name: p.name,
+            week_start_date: p.week_start_date,
+            day_of_week: p.day_of_week,
+            meal_number: p.meal_number
+          })));
+        }
+      }
+      
+      if (error) throw error;
+      return data;
+    },
+  });
   
   // Filtrar produtos transformados e disponíveis
   const transformedProducts = products.filter(product => product.available);
@@ -162,69 +337,241 @@ const MenuContent = () => {
     },
   });
 
-  // Processar dados para o formato necessário
+  // Processar dados para o formato necessário - combinando menus e produtos com validação
   const days: Day[] = Array.from({ length: 7 }, (_, i) => {
+    console.log(`=== PROCESSANDO DIA ${i} ===`);
     const date = addDays(currentWeekStart, i);
     const dayOfWeek = i; // Usando o índice como dia da semana (0 = domingo, 1 = segunda, etc.)
     
-    const dayMeals = menus
-      .filter(menu => parseInt(menu.day_of_week) === dayOfWeek)
-      .map(menu => ({
-        id: menu.id,
-        title: menu.meal_name, // Corrigido para usar meal_name do banco
-        description: menu.description || "",
-        image_url: menu.image_url,
-        type: getMealType(menu.meal_number), // Função para determinar o tipo com base no meal_number
-        meal_number: menu.meal_number
-      }));
+    // Logs de depuração detalhados para datas
+    console.log(`Data atual da semana: ${format(currentWeekStart, 'yyyy-MM-dd')}`);
+    console.log(`Dia processado: ${i}, Data calculada: ${format(date, 'yyyy-MM-dd')}`);
+    
+    // Log dos dados brutos recebidos
+    console.log(`Menus recebidos:`, menus.map(m => ({
+      id: m.id,
+      meal_name: m.meal_name,
+      week_start_date: m.week_start_date,
+      day_of_week: m.day_of_week,
+      meal_number: m.meal_number,
+      normalized_date: normalizeDate(m.week_start_date)
+    })));
+    
+    console.log(`Produtos recebidos:`, weekProducts.map(p => ({
+      id: p.id,
+      name: p.name,
+      week_start_date: p.week_start_date,
+      day_of_week: p.day_of_week,
+      meal_number: p.meal_number,
+      normalized_date: normalizeDate(p.week_start_date)
+    })));
+    
+    // Validação de consistência dos dados
+    const validateMenu = (menu: any): boolean => {
+      return menu && 
+             typeof menu.day_of_week === 'number' && 
+             menu.day_of_week >= 0 && menu.day_of_week <= 6 &&
+             typeof menu.meal_number === 'number' && 
+             menu.meal_number >= 1 && menu.meal_number <= 5 &&
+             menu.meal_name && menu.meal_name.trim() !== '';
+    };
+
+    const validateProduct = (product: any): boolean => {
+      return product && 
+             typeof product.day_of_week === 'number' && 
+             product.day_of_week >= 0 && product.day_of_week <= 6 &&
+             typeof product.meal_number === 'number' && 
+             product.meal_number >= 1 && product.meal_number <= 5 &&
+             product.name && product.name.trim() !== '' &&
+             typeof product.price === 'number' && product.price > 0;
+    };
+
+    // Filtrar dados inválidos
+    const validMenus = menus.filter(validateMenu);
+    const validWeekProducts = weekProducts.filter(validateProduct);
+    
+    console.log(`Dia ${i}: menus válidos=${validMenus.length}, produtos válidos=${validWeekProducts.length}`);
+    console.log(`Dia ${i}: menus brutos=${menus.length}, produtos brutos=${weekProducts.length}`);
+    
+    // VERIFICAR SE USUÁRIO É MASTER ADMIN
+    console.log(`=== VERIFICAÇÃO DE MASTER ADMIN ===`);
+    console.log(`ID do restaurante: ${id}`);
+    console.log(`user_id das configurações: ${settings?.user_id}`);
+    console.log(`É master admin: ${isMasterAdmin}`);
+    console.log(`Configurações completas:`, settings);
+    
+    // Se for master admin, usar apenas produtos (substituição completa)
+    if (isMasterAdmin) {
+      console.log(`🎯 MASTER ADMIN DETECTADO - SUBSTITUINDO TODOS OS MENUS POR PRODUTOS`);
+      
+      // Criar mapa de produtos para este dia
+      const productMap = new Map<string, Meal>();
+      
+      validWeekProducts
+        .filter(product => parseInt(product.day_of_week.toString()) === dayOfWeek)
+        .forEach(product => {
+          const key = `${product.day_of_week}-${product.meal_number}`;
+          if (!productMap.has(key)) { // Evitar sobrescrição
+            productMap.set(key, {
+              id: product.id,
+              title: product.name,
+              description: product.description || "",
+              image_url: product.image_url,
+              type: getMealType(product.meal_number),
+              meal_number: product.meal_number,
+              isProduct: true,
+              price: product.price
+            });
+          }
+        });
+      
+      // Converter mapa para array e ordenar
+      const meals = Array.from(productMap.values()).sort((a, b) => a.meal_number - b.meal_number);
+      
+      console.log(`Dia ${i}: NÍVEL 3 - ${meals.length} produtos encontrados`);
+      
+      return {
+        date,
+        meals,
+        visible: shouldShowDay(i, settings)
+      };
+    }
+    
+    // Se não for master admin, usar lógica normal de combinação
+    console.log(`📋 NÃO É MASTER ADMIN - USANDO COMBINAÇÃO NORMAL`);
+    
+    // Criar mapas para busca rápida
+    const menuMap = new Map<string, Meal>();
+    const productMap = new Map<string, any>();
+    
+    // Mapear menus por chave dia+refeição
+    validMenus
+      .filter(menu => parseInt(menu.day_of_week.toString()) === dayOfWeek)
+      .forEach(menu => {
+        const key = `${menu.day_of_week}-${menu.meal_number}`;
+        if (!menuMap.has(key)) { // Evitar sobrescrição
+          menuMap.set(key, {
+            id: menu.id,
+            title: menu.meal_name,
+            description: menu.description || "",
+            image_url: menu.image_url,
+            type: getMealType(menu.meal_number),
+            meal_number: menu.meal_number
+          });
+        }
+      });
+    
+    // Mapear produtos por chave dia+refeição
+    validWeekProducts
+      .filter(product => parseInt(product.day_of_week.toString()) === dayOfWeek)
+      .forEach(product => {
+        const key = `${product.day_of_week}-${product.meal_number}`;
+        if (!productMap.has(key)) { // Evitar sobrescrição
+          productMap.set(key, product);
+        }
+      });
+    
+    console.log(`Dia ${i}: menus mapeados=${menuMap.size}, produtos mapeados=${productMap.size}`);
+    
+    // Logs detalhados de comparação
+    const weekStartFormatted = format(currentWeekStart, 'yyyy-MM-dd');
+    console.log(`Comparando com week_start_date: ${weekStartFormatted}`);
+    
+    validMenus.forEach(menu => {
+      const menuWeekStart = normalizeDate(menu.week_start_date);
+      console.log(`Menu ${menu.id}: week_start_date original=${menu.week_start_date}, normalizado=${menuWeekStart}, dia_semana=${menu.day_of_week}, meal_number=${menu.meal_number}, match=${menuWeekStart === weekStartFormatted && menu.day_of_week === dayOfWeek}`);
+    });
+    
+    validWeekProducts.forEach(product => {
+      const productWeekStart = normalizeDate(product.week_start_date);
+      console.log(`Produto ${product.id}: week_start_date original=${product.week_start_date}, normalizado=${productWeekStart}, dia_semana=${product.day_of_week}, meal_number=${product.meal_number}, match=${productWeekStart === weekStartFormatted && product.day_of_week === dayOfWeek}`);
+    });
+    
+    // Combinar: priorizar produtos, manter menus sem produtos correspondentes
+    const combinedMeals: Meal[] = [];
+    const processedKeys = new Set<string>();
+    
+    // Primeiro adicionar produtos (com prioridade)
+    productMap.forEach((product, key) => {
+      combinedMeals.push({
+        id: product.id,
+        title: product.name,
+        description: product.description || "",
+        image_url: product.image_url,
+        type: getMealType(product.meal_number),
+        meal_number: product.meal_number,
+        isProduct: true,
+        price: product.price
+      });
+      processedKeys.add(key);
+    });
+    
+    // Depois adicionar menus que não têm produtos correspondentes
+    menuMap.forEach((menu, key) => {
+      if (!processedKeys.has(key)) {
+        combinedMeals.push(menu);
+      }
+    });
+    
+    // Ordenar por meal_number
+    combinedMeals.sort((a, b) => a.meal_number - b.meal_number);
+    
+    console.log(`Dia ${i}: total de refeições combinadas=${combinedMeals.length}`);
+    console.log(`=== FINALIZADO DIA ${i} ===`);
     
     return {
       date,
-      meals: dayMeals,
-      visible: shouldShowDay(i, settings) // Verificando se o dia deve ser exibido com base nas configurações
+      meals: combinedMeals,
+      visible: shouldShowDay(i, settings)
     };
   });
 
   // Componente para exibir um card de refeição
-  const MealCard = ({ meal, day, onTransformToProduct }: { meal: Meal; day: Day; onTransformToProduct?: (product: TransformedProduct) => void }) => {
+  const MealCard = ({ meal, day, onTransformToProduct, cartEnabled = true }: { meal: Meal; day: Day; onTransformToProduct?: (product: TransformedProduct) => void; cartEnabled?: boolean }) => {
+    // Validação básica dos dados do meal
+    if (!meal || !meal.title || meal.title.trim() === '') {
+      console.warn('MealCard recebido com dados inválidos:', meal);
+      return null;
+    }
+
     const config = mealTypeConfig[meal.type];
     
-    // Verificar se há um produto transformado para esta refeição
-    const relatedProduct = transformedProducts.find(product => 
-      product.name.toLowerCase().includes(meal.title.toLowerCase()) ||
-      product.description.toLowerCase().includes(meal.description.toLowerCase())
-    );
-    
-    // Se houver produto transformado, mostrar o card de produto
-    if (relatedProduct && onTransformToProduct) {
+    // Se for um produto (já transformado), mostrar como produto
+    if (meal.isProduct) {
+      // Validação adicional para produtos
+      if (!meal.price || meal.price <= 0) {
+        console.warn('Produto com preço inválido:', meal);
+        return null;
+      }
+
       return (
         <div 
-                  className="group relative overflow-hidden rounded-xl bg-white/10 backdrop-blur-sm shadow-md transition-all hover:shadow-lg cursor-pointer"
-                  onClick={() => onTransformToProduct({
-                    id: relatedProduct.id,
-                    name: relatedProduct.name,
-                    description: relatedProduct.description || meal.description,
-                    price: relatedProduct.price,
-                    image_url: relatedProduct.image_url || meal.image_url,
-                    category: relatedProduct.category || config.label,
-                    preparation_time: "40 minutos"
-                  })}
-                >
-                  <div className="absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100 bg-gradient-to-r from-green-500 to-emerald-500 mix-blend-overlay"></div>
+          className="group relative overflow-hidden rounded-xl bg-white/10 backdrop-blur-sm shadow-md transition-all hover:shadow-lg cursor-pointer"
+          onClick={() => onTransformToProduct && onTransformToProduct({
+            id: meal.id,
+            name: meal.title,
+            description: meal.description || 'Produto transformado',
+            price: meal.price,
+            image_url: meal.image_url,
+            category: config?.label || 'Produto',
+            preparation_time: "40 minutos"
+          })}
+        >
+          <div className="absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100 bg-gradient-to-r from-green-500 to-emerald-500 mix-blend-overlay"></div>
           
           <div className="absolute top-2 right-2">
-            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800`}>
+            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800">
               <Package className="w-3 h-3 mr-1" />
               Produto
             </span>
           </div>
           
           <div className="flex">
-            {relatedProduct.image_url || meal.image_url ? (
+            {meal.image_url ? (
               <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden">
                 <img 
-                  src={relatedProduct.image_url || meal.image_url} 
-                  alt={relatedProduct.name}
+                  src={meal.image_url} 
+                  alt={meal.title}
                   className="h-full w-full object-cover transition-transform group-hover:scale-110"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = "https://placehold.co/100x100/orange/white?text=Sem+Imagem";
@@ -232,20 +579,22 @@ const MenuContent = () => {
                 />
               </div>
             ) : (
-              <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center bg-gradient-to-br from-amber-50 to-orange-100">
-                <Package className="h-10 w-10 text-orange-300" />
+              <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
+                <Package className="h-10 w-10 text-green-300" />
               </div>
             )}
             
             <div className="flex flex-1 flex-col p-3">
-              <h3 className="font-medium text-gray-900 line-clamp-1">{relatedProduct.name}</h3>
-              <p className="mt-1 text-sm text-gray-500 line-clamp-2">{relatedProduct.description}</p>
-              <div className="mt-2 flex items-center justify-between">
-                <span className="text-lg font-bold text-green-600">
-                  R$ {relatedProduct.price.toFixed(2)}
-                </span>
-                <span className="text-xs text-gray-500">Clique para ver detalhes</span>
-              </div>
+              <h3 className="font-medium text-gray-900 line-clamp-1">{meal.title}</h3>
+              <p className="mt-1 text-sm text-gray-500 line-clamp-2">{meal.description}</p>
+              {meal.price && (
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-lg font-bold text-green-600">
+                    R$ {meal.price.toFixed(2)}
+                  </span>
+                  <span className="text-xs text-gray-500">Clique para ver detalhes</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -255,11 +604,11 @@ const MenuContent = () => {
     // Card de refeição normal
     return (
       <div className="group relative overflow-hidden rounded-xl bg-white/10 backdrop-blur-sm shadow-md transition-all hover:shadow-lg">
-        <div className={`absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100 bg-gradient-to-r ${config.gradient} mix-blend-overlay`}></div>
+        <div className={`absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100 bg-gradient-to-r ${config?.gradient || 'from-orange-500 to-amber-500'} mix-blend-overlay`}></div>
         
         <div className="absolute top-2 right-2">
-          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${config.badgeColor}`}>
-            {config.label}
+          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${config?.badgeColor || 'bg-orange-100 text-orange-800'}`}>
+            {config?.label || 'Refeição'}
           </span>
         </div>
         
@@ -304,6 +653,12 @@ const MenuContent = () => {
 
   // Componente para exibir um card de dia
   const DayCard = ({ day }: { day: Day }) => {
+    // Validação do dia
+    if (!day || !day.date) {
+      console.warn('DayCard recebido com dados inválidos:', day);
+      return null;
+    }
+
     const dayName = format(day.date, 'EEEE', { locale: ptBR });
     const dayNumber = format(day.date, 'd', { locale: ptBR });
     const monthName = format(day.date, 'MMMM', { locale: ptBR });
@@ -311,15 +666,15 @@ const MenuContent = () => {
     const handleTransformToProduct = (product: TransformedProduct) => {
       setSelectedTransformedProduct(product);
     };
-
-    // Verificar se há produtos transformados para este dia
-    const dayTransformedProducts = transformedProducts.filter(product => {
-      // Verificar se o produto está relacionado a alguma refeição do dia
-      return day.meals.some(meal => 
-        product.name.toLowerCase().includes(meal.title.toLowerCase()) ||
-        product.description.toLowerCase().includes(meal.description.toLowerCase())
-      );
-    });
+    
+    // Validação das refeições do dia
+    const validMeals = day.meals?.filter(meal => {
+      if (!meal || !meal.title || meal.title.trim() === '') {
+        console.warn('Refeição inválida encontrada:', meal);
+        return false;
+      }
+      return true;
+    }) || [];
     
     return (
       <div className="overflow-hidden rounded-xl bg-white/10 backdrop-blur-sm shadow-md">
@@ -338,62 +693,12 @@ const MenuContent = () => {
             <div className="flex justify-center p-4">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-orange-500 border-t-transparent"></div>
             </div>
-          ) : dayTransformedProducts.length > 0 ? (
-            // Se houver produtos transformados, mostrar apenas eles
-            <div className="space-y-3">
-              {dayTransformedProducts.map(product => (
-                <div 
-                    key={product.id}
-                    className="group relative overflow-hidden rounded-xl bg-white/10 backdrop-blur-sm shadow-md transition-all hover:shadow-lg cursor-pointer"
-                    onClick={() => handleTransformToProduct(product)}
-                  >
-                    <div className="absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100 bg-gradient-to-r from-green-500 to-emerald-500 mix-blend-overlay"></div>
-                    
-                    <div className="absolute top-2 right-2">
-                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800">
-                        <Package className="w-3 h-3 mr-1" />
-                        Produto
-                      </span>
-                    </div>
-                  
-                  <div className="flex">
-                    {product.image_url ? (
-                      <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden">
-                        <img 
-                          src={product.image_url} 
-                          alt={product.name}
-                          className="h-full w-full object-cover transition-transform group-hover:scale-110"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = "https://placehold.co/100x100/orange/white?text=Sem+Imagem";
-                          }}
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
-                        <Package className="h-10 w-10 text-green-300" />
-                      </div>
-                    )}
-                    
-                    <div className="flex flex-1 flex-col p-3">
-                      <h3 className="font-medium text-gray-900 line-clamp-1">{product.name}</h3>
-                      <p className="mt-1 text-sm text-gray-500 line-clamp-2">{product.description}</p>
-                      <div className="mt-2 flex items-center justify-between">
-                        <span className="text-lg font-bold text-green-600">
-                          R$ {product.price.toFixed(2)}
-                        </span>
-                        <span className="text-xs text-gray-500">Clique para ver detalhes</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : day.meals.length > 0 ? (
-            // Se não houver produtos transformados, mostrar as refeições normais
+          ) : validMeals.length > 0 ? (
+            // Mostrar as refeições combinadas (produtos e menus)
             <ul className="space-y-3">
-              {day.meals.map(meal => (
+              {validMeals.map(meal => (
                 <li key={meal.id}>
-                  <MealCard meal={meal} day={day} onTransformToProduct={handleTransformToProduct} />
+                  <MealCard meal={meal} day={day} onTransformToProduct={handleTransformToProduct} cartEnabled={settings?.plan_level === 2 || settings?.plan_level === 3 || isMasterAdmin} />
                 </li>
               ))}
             </ul>
@@ -895,6 +1200,46 @@ const MenuContent = () => {
 
   return (
     <div className="min-h-screen">
+      {console.log('=== RENDERIZANDO COMPONENTE MENU ===')}
+      {console.log('Estado de carregamento:', isLoading)}
+      {console.log('Quantidade de dias da semana:', days.length)}
+      {console.log('Nível do plano:', settings?.plan_level)}
+      {console.log('ID do restaurante (URL):', id)}
+      {console.log('Settings completo:', settings)}
+      {console.log('É admin (usuário logado)?', isAdmin)}
+      {console.log('É master admin (dono do restaurante)?', isMasterAdmin)}
+      
+      {/* Painel de Depuração para Master Admin */}
+      <div className="bg-blue-100 border-b border-blue-300 p-2 text-xs font-mono">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center space-x-4">
+            <span className="text-blue-800 font-bold">🔍 DEPURAÇÃO</span>
+            <span className="text-blue-700">Restaurante: {id}</span>
+            <span className="text-blue-700">É Master Admin: {isMasterAdmin ? 'Sim' : 'Não'}</span>
+            <span className="text-blue-700">Semana: {format(currentWeekStart, 'yyyy-MM-dd')}</span>
+            <span className="text-blue-700">Menus: {menus.length}</span>
+            <span className="text-blue-700">Produtos: {weekProducts.length}</span>
+            {isMasterAdmin && (
+              <span className="text-green-800 font-bold ml-4">🎯 MASTER ADMIN ATIVADO</span>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Painel de Master Admin (apenas quando ativo) */}
+      {isMasterAdmin && (
+        <div className="bg-green-100 border-b border-green-300 p-2 text-xs font-mono">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex items-center space-x-4">
+              <span className="text-green-800 font-bold">🎯 MASTER ADMIN ATIVADO</span>
+              <span className="text-green-700">Substituição ativa: 100%</span>
+              <span className="text-green-700">Menus ocultos: {menus.length}</span>
+              <span className="text-green-700">Produtos visíveis: {weekProducts.length}</span>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Componente Background com orbes animadas */}
       <Background />
       
@@ -1131,25 +1476,28 @@ const MenuContent = () => {
         </div>
       )}
       
-      {/* Botão fixo do carrinho */}
-      <button
-        onClick={() => setShowCart(true)}
-        className="fixed bottom-6 right-6 bg-orange-500 hover:bg-orange-600 text-white rounded-full p-4 shadow-lg transition-all duration-200 hover:scale-110 z-50"
-      >
-        <ShoppingCart className="h-6 w-6" />
-        {itemCount > 0 && (
-          <span className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold">
-            {itemCount}
-          </span>
-        )}
-      </button>
+      {/* Botão fixo do carrinho - apenas para níveis 2 e 3 e Master Admin */}
+      {(settings?.plan_level === 2 || settings?.plan_level === 3 || isMasterAdmin) && (
+        <button
+          onClick={() => setShowCart(true)}
+          className="fixed bottom-6 right-6 bg-orange-500 hover:bg-orange-600 text-white rounded-full p-4 shadow-lg transition-all duration-200 hover:scale-110 z-50"
+        >
+          <ShoppingCart className="h-6 w-6" />
+          {itemCount > 0 && (
+            <span className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold">
+              {itemCount}
+            </span>
+          )}
+        </button>
+      )}
       
-      {/* Card do produto transformado (desliza de baixo para cima) */}
-      {selectedTransformedProduct && (
+      {/* Card do produto transformado (desliza de baixo para cima) - apenas para níveis 2 e 3 e Master Admin */}
+      {selectedTransformedProduct && (settings?.plan_level === 2 || settings?.plan_level === 3 || isMasterAdmin) && (
         <TransformedProductCard
           product={selectedTransformedProduct}
           onClose={() => setSelectedTransformedProduct(null)}
           onAddToCart={() => setSelectedTransformedProduct(null)}
+          cartEnabled={settings?.plan_level === 2 || settings?.plan_level === 3 || isMasterAdmin}
         />
       )}
       
@@ -1171,3 +1519,26 @@ const Menu = () => {
 };
 
 export default Menu;
+
+// Validação adicional ao carregar o componente principal
+(() => {
+  // Log de depuração para validar os dados da semana
+  console.log('Componente Menu carregado. Verificando integridade dos dados...');
+  
+  // Adicionar validação de segurança para garantir que os dados estão corretos
+  const validateMenuData = () => {
+    try {
+      // Verificar se há dados válidos no localStorage ou contexto
+      const menuData = localStorage.getItem('menuData');
+      if (menuData) {
+        const parsed = JSON.parse(menuData);
+        console.log('Dados do menu encontrados:', parsed);
+      }
+    } catch (error) {
+      console.warn('Erro ao validar dados do menu:', error);
+    }
+  };
+  
+  // Executar validação após um pequeno delay para garantir que tudo está carregado
+  setTimeout(validateMenuData, 1000);
+})();

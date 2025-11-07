@@ -38,6 +38,7 @@ interface Menu {
   meal_name: string;
   description: string;
   image_url: string;
+  product_id?: string;
 }
 
 const mealLabels = ["Café da Manhã", "Almoço", "Lanche", "Jantar"];
@@ -197,8 +198,13 @@ const AdminMenus = () => {
         menuName: menu.meal_name,
         weekStartDate: menu.week_start_date,
         dayOfWeek: menu.day_of_week,
+        mealNumber: menu.meal_number,
         calculatedMealDate: mealDateISO,
-        menuId: menu.id
+        menuId: menu.id,
+        // Novos campos de vínculo
+        productWeekStart: menu.week_start_date,
+        productDayOfWeek: menu.day_of_week,
+        productMealNumber: menu.meal_number
       });
 
       const productData = {
@@ -209,7 +215,11 @@ const AdminMenus = () => {
         available: true,
         image_url: menu.image_url || '',
         user_id: user!.id,
-        created_at: mealDateISO // Usar a data da refeição, não a data atual
+        created_at: mealDateISO, // Usar a data da refeição, não a data atual
+        // Adicionar dados de vínculo para substituição automática
+        week_start_date: menu.week_start_date,
+        day_of_week: menu.day_of_week,
+        meal_number: menu.meal_number
       };
 
       // Criar o produto com a data do menu
@@ -238,6 +248,29 @@ const AdminMenus = () => {
             description: "A data do produto criado não corresponde exatamente à data do menu. Verifique os logs para mais detalhes.",
             variant: "destructive",
           });
+        }
+        
+        // Atualizar o menu com o product_id do produto criado
+        try {
+          const { error: updateError } = await supabase
+            .from('menus')
+            .update({ product_id: createdProduct.id })
+            .eq('id', menu.id);
+          
+          if (updateError) {
+            console.error("Erro ao atualizar menu com product_id:", updateError);
+            toast({
+              title: "Aviso",
+              description: "Produto criado, mas não foi possível vincular ao menu. Atualize manualmente.",
+              variant: "destructive",
+            });
+          } else {
+            console.log("Menu atualizado com product_id:", createdProduct.id);
+            // Atualizar o cache local do menu
+            queryClient.invalidateQueries({ queryKey: ["admin-menus", user?.id] });
+          }
+        } catch (updateError) {
+          console.error("Erro ao vincular produto ao menu:", updateError);
         }
       }
       
@@ -666,15 +699,28 @@ const AdminMenus = () => {
                   )}
                   <div className="flex gap-2 flex-wrap">
                     {isLevel3 && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => transformToProduct(menu)}
-                        title="Transformar em Produto"
-                        className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-                      >
-                        <Package className="w-4 h-4" />
-                      </Button>
+                      menu.product_id ? (
+                        <Link to={`/admin/products/${menu.product_id}`}>
+                          <Badge 
+                            variant="default" 
+                            className="bg-green-100 text-green-800 hover:bg-green-200 cursor-pointer"
+                            title="Produto já criado. Clique para editar o produto."
+                          >
+                            <Package className="w-3 h-3 mr-1" />
+                            Produto
+                          </Badge>
+                        </Link>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => transformToProduct(menu)}
+                          title="Transformar em Produto"
+                          className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                        >
+                          <Package className="w-4 h-4" />
+                        </Button>
+                      )
                     )}
                     <Button
                       variant="outline"

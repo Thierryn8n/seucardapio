@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import { Level3Route } from "./components/Level3Route";
 import Landing from "./pages/Landing";
 import Menu from "./pages/Menu";
 import Auth from "./pages/Auth";
@@ -21,8 +22,10 @@ import AdminProducts from "./pages/AdminProducts";
 import AdminOrders from "./pages/AdminOrders";
 import AdminCoupons from "./pages/AdminCoupons";
 import AdminLevelConfig from "./pages/AdminLevelConfig";
+import AdminProductForm from "./pages/AdminProductForm";
 import CustomerDelivery from "./pages/CustomerDelivery";
 import CustomerOrderTracking from "./pages/CustomerOrderTracking";
+import Checkout from "./pages/Checkout";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,11 +53,22 @@ const App = () => (
             <Route path="/admin/gallery" element={<AdminGallery />} />
             <Route path="/admin/suggestions" element={<AdminMealSuggestions />} />
             <Route path="/admin/products" element={<AdminProducts />} />
+            <Route path="/admin/products/new" element={
+              <Level3Route>
+                <AdminProductForm />
+              </Level3Route>
+            } />
+            <Route path="/admin/products/:id" element={
+              <Level3Route>
+                <AdminProductForm />
+              </Level3Route>
+            } />
             <Route path="/admin/orders" element={<AdminOrders />} />
             <Route path="/admin/coupons" element={<AdminCoupons />} />
             <Route path="/admin/level-config" element={<AdminLevelConfig />} />
             <Route path="/delivery" element={<CustomerDelivery />} />
             <Route path="/delivery/orders/:orderId" element={<CustomerOrderTracking />} />
+            <Route path="/checkout" element={<Checkout />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

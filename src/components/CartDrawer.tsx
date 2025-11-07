@@ -36,7 +36,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
     setIsCheckingOut(true);
     // Navegar para a página de checkout
-    navigate('/checkout', { state: { cartItems: items, total } });
+    navigate('/checkout', { state: { cart: items, total } });
     onClose();
   };
 

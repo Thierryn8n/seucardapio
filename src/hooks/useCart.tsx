@@ -11,6 +11,12 @@ export interface CartItem {
   image_url?: string;
   category?: string;
   observations?: string;
+  selectedOptions?: {
+    groupId: string;
+    optionId: string;
+    name: string;
+    additionalPrice: number;
+  }[];
 }
 
 export interface CartContextType {

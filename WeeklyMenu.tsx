@@ -2,8 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSettings } from "@/hooks/useSettings";
-import { useSubscription } from "@/hooks/useSubscription";
-import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { MealCard } from "./MealCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { startOfWeek, addDays, format } from "date-fns";
@@ -41,39 +39,10 @@ const weekDays = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "
 
 export const WeeklyMenu = ({ weekStartDate, userId }: WeeklyMenuProps) => {
   const { settings } = useSettings();
-  const { isProfessional } = useSubscription();
-  const { isMasterAdmin } = useAdminStatus();
   
-  // Buscar produtos da semana (para Professional e Admin Master)
-  const { data: products, isLoading: isLoadingProducts } = useQuery({
-    queryKey: ["products-week", weekStartDate.toISOString(), userId, isProfessional, isMasterAdmin],
-    queryFn: async () => {
-      console.log("Buscando produtos para:", format(weekStartDate, "yyyy-MM-dd"), "userId:", userId);
-      
-      let query = supabase
-        .from("products")
-        .select("*")
-        .eq("week_start_date", format(weekStartDate, "yyyy-MM-dd"))
-        .eq("available", true);
-      
-      if (userId) {
-        query = query.eq("user_id", userId);
-      }
-      
-      const { data, error } = await query
-        .order("day_of_week")
-        .order("meal_number");
-
-      console.log("Resultado produtos:", data, "erro:", error);
-      if (error) throw error;
-      return data as Product[];
-    },
-    enabled: isProfessional || isMasterAdmin,
-  });
-
-  // Buscar menus da semana (para usuários comuns ou como fallback)
+  // Buscar menus da semana
   const { data: menus, isLoading: isLoadingMenus } = useQuery({
-    queryKey: ["menus", weekStartDate.toISOString(), userId, isProfessional, isMasterAdmin],
+    queryKey: ["menus", weekStartDate.toISOString(), userId],
     queryFn: async () => {
       console.log("Buscando menus para:", format(weekStartDate, "yyyy-MM-dd"), "userId:", userId);
       
@@ -96,26 +65,39 @@ export const WeeklyMenu = ({ weekStartDate, userId }: WeeklyMenuProps) => {
     },
   });
 
-  // Lógica de dados baseada no tipo de usuário
+  // Buscar produtos que correspondem a esta semana
+  const { data: products, isLoading: isLoadingProducts } = useQuery({
+    queryKey: ["products-week", weekStartDate.toISOString(), userId],
+    queryFn: async () => {
+      console.log("Buscando produtos para:", format(weekStartDate, "yyyy-MM-dd"), "userId:", userId);
+      
+      let query = supabase
+        .from("products")
+        .select("*")
+        .eq("week_start_date", format(weekStartDate, "yyyy-MM-dd"));
+      
+      if (userId) {
+        query = query.eq("user_id", userId);
+      }
+      
+      const { data, error } = await query
+        .order("day_of_week")
+        .order("meal_number");
+
+      console.log("Resultado produtos:", data, "erro:", error);
+      if (error) throw error;
+      return data as Product[];
+    },
+  });
+
+  // Combinar menus e produtos com lógica de substituição
   const combinedData = useMemo(() => {
     console.log("=== DEBUG WeeklyMenu ===");
-    console.log("Tipo de usuário:", { isProfessional, isMasterAdmin });
     console.log("Menus encontrados:", menus?.length || 0, menus);
     console.log("Produtos encontrados:", products?.length || 0, products);
     console.log("Data da semana:", format(weekStartDate, "yyyy-MM-dd"));
     
-    // Para Professional e Admin Master: substituição total por produtos
-    if ((isProfessional || isMasterAdmin) && products && products.length > 0) {
-      console.log("Usuário Professional/Admin Master - substituindo menus por produtos");
-      
-      // Converter produtos para formato de exibição (substituição total)
-      return products.map(product => ({ 
-        type: 'product' as const, 
-        data: product 
-      }));
-    }
-    
-    // Para usuários comuns: lógica de mesclagem existente
+    // Se não houver menus, retornar array vazio
     if (!menus || menus.length === 0) {
       console.log("Nenhum menu encontrado!");
       return [];
@@ -144,7 +126,7 @@ export const WeeklyMenu = ({ weekStartDate, userId }: WeeklyMenuProps) => {
       productMap.set(key, product);
     });
 
-    // Produtos têm prioridade sobre menus (mesclagem)
+    // Produtos têm prioridade sobre menus
     const result: Array<{ type: 'menu' | 'product'; data: Menu | Product }> = [];
 
     // Primeiro adicionar todos os produtos
@@ -159,7 +141,7 @@ export const WeeklyMenu = ({ weekStartDate, userId }: WeeklyMenuProps) => {
       }
     });
 
-    console.log("Resultado combinado (usuário comum):", result.length, result);
+    console.log("Resultado combinado:", result.length, result);
     console.log("Mapa de produtos:", Array.from(productMap.keys()));
     console.log("Mapa de menus:", Array.from(menuMap.keys()));
 
@@ -174,11 +156,11 @@ export const WeeklyMenu = ({ weekStartDate, userId }: WeeklyMenuProps) => {
       if (aDay !== bDay) return aDay - bDay;
       return aMeal - bMeal;
     });
-  }, [menus, products, weekStartDate, isProfessional, isMasterAdmin]);
+  }, [menus, products, weekStartDate]);
 
-  const isLoading = (isProfessional || isMasterAdmin) ? isLoadingProducts : isLoadingMenus;
+  const isLoading = isLoadingMenus || isLoadingProducts;
 
-  console.log("Estado de loading:", isLoading, "isLoadingMenus:", isLoadingMenus, "isLoadingProducts:", isLoadingProducts, "isProfessional:", isProfessional, "isMasterAdmin:", isMasterAdmin);
+  console.log("Estado de loading:", isLoading, "isLoadingMenus:", isLoadingMenus, "isLoadingProducts:", isLoadingProducts);
 
   if (isLoading) {
     return (
@@ -201,15 +183,11 @@ export const WeeklyMenu = ({ weekStartDate, userId }: WeeklyMenuProps) => {
   }
 
   // Se não há dados carregados, mostrar mensagem
-  const hasNoData = (isProfessional || isMasterAdmin) ? (!products || products.length === 0) : (!menus || menus.length === 0);
-  
-  if (hasNoData) {
-    console.log("Nenhum dado disponível para o tipo de usuário:", { isProfessional, isMasterAdmin });
+  if (!menus && !products) {
+    console.log("Nenhum dado disponível");
     return (
       <div className="text-center py-16">
-        <p className="text-muted-foreground">
-          {(isProfessional || isMasterAdmin) ? "Nenhum produto disponível" : "Nenhum cardápio disponível"}
-        </p>
+        <p className="text-muted-foreground">Nenhum cardápio disponível</p>
       </div>
     );
   }
@@ -290,7 +268,7 @@ export const WeeklyMenu = ({ weekStartDate, userId }: WeeklyMenuProps) => {
                             price: product.price,
                             available: product.available
                           }}
-                          cartEnabled={settings?.plan_level === 2 || settings?.plan_level === 3 || isMasterAdmin}
+                          cartEnabled={settings?.plan_level === 2 || settings?.plan_level === 3}
                         />
                       );
                     } else {
