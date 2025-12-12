@@ -700,16 +700,15 @@ const AdminMenus = () => {
                   <div className="flex gap-2 flex-wrap">
                     {isLevel3 && (
                       menu.product_id ? (
-                        <Link to={`/admin/products/${menu.product_id}`}>
-                          <Badge 
-                            variant="default" 
-                            className="bg-green-100 text-green-800 hover:bg-green-200 cursor-pointer"
-                            title="Produto já criado. Clique para editar o produto."
-                          >
-                            <Package className="w-3 h-3 mr-1" />
-                            Produto
-                          </Badge>
-                        </Link>
+                        <Badge 
+                          variant="default" 
+                          className="bg-green-100 text-green-800 hover:bg-green-200 cursor-pointer"
+                          title="Produto já criado. Clique para ver na página de produtos."
+                          onClick={() => navigate("/admin/products")}
+                        >
+                          <Package className="w-3 h-3 mr-1" />
+                          Produto Ativo
+                        </Badge>
                       ) : (
                         <Button
                           variant="outline"

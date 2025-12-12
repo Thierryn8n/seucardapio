@@ -5,29 +5,33 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { Level3Route } from "./components/Level3Route";
+import { AdminRoute, SimpleOnlyRoute } from "./components/routes";
 import Landing from "./pages/Landing";
 import Menu from "./pages/Menu";
 import Auth from "./pages/Auth";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminUsers from "./pages/AdminUsers";
-import AdminPlans from "./pages/AdminPlans";
-import Admin from "./pages/Admin";
-import AdminDashboardSelector from "./pages/AdminDashboardSelector";
-import AdminMenus from "./pages/AdminMenus";
-import AdminMenuForm from "./pages/AdminMenuForm";
-import AdminSettings from "./pages/AdminSettings";
-import AdminGallery from "./pages/AdminGallery";
-import AdminMealSuggestions from "./pages/AdminMealSuggestions";
-import AdminProducts from "./pages/AdminProducts";
-import AdminOrders from "./pages/AdminOrders";
-import AdminCoupons from "./pages/AdminCoupons";
-import AdminLevelConfig from "./pages/AdminLevelConfig";
-import AdminProductForm from "./pages/AdminProductForm";
 import CustomerDelivery from "./pages/CustomerDelivery";
 import CustomerOrderTracking from "./pages/CustomerOrderTracking";
 import Checkout from "./pages/Checkout";
 import NotFound from "./pages/NotFound";
 
+// Admin Simples Pages
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminPlans from "./pages/admin/AdminPlans";
+import AdminDashboardSelector from "./pages/admin/AdminDashboardSelector";
+import AdminMenus from "./pages/admin/AdminMenus";
+import AdminMenuForm from "./pages/admin/AdminMenuForm";
+import AdminSettings from "./pages/admin/AdminSettings";
+import AdminGallery from "./pages/admin/AdminGallery";
+import AdminMealSuggestions from "./pages/admin/AdminMealSuggestions";
+import AdminProducts from "./pages/admin/AdminProducts";
+import AdminOrders from "./pages/admin/AdminOrders";
+import AdminCoupons from "./pages/admin/AdminCoupons";
+// import AdminLevelConfig from "./pages/admin/AdminLevelConfig"; // Arquivo não existe
+import AdminProductForm from "./pages/admin/AdminProductForm";
+
+// Mercado Pago Pages
+import { AdminMercadoPago } from "./pages/admin";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -41,34 +45,114 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/:id/cardapio" element={<Menu />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/selector" element={<AdminDashboardSelector />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/admin/users" element={<AdminUsers />} />
-            <Route path="/admin/plans" element={<AdminPlans />} />
-            <Route path="/admin/menus" element={<AdminMenus />} />
-            <Route path="/admin/menus/new" element={<AdminMenuForm />} />
-            <Route path="/admin/menus/:id" element={<AdminMenuForm />} />
-            <Route path="/admin/settings" element={<AdminSettings />} />
-            <Route path="/admin/gallery" element={<AdminGallery />} />
-            <Route path="/admin/suggestions" element={<AdminMealSuggestions />} />
-            <Route path="/admin/products" element={<AdminProducts />} />
+            
+            {/* Rotas do Admin Simples - Protegidas por AdminRoute */}
+            <Route path="/admin" element={
+              <AdminRoute>
+                <AdminDashboardSelector />
+              </AdminRoute>
+            } />
+            <Route path="/admin/selector" element={
+              <AdminRoute>
+                <AdminDashboard />
+              </AdminRoute>
+            } />
+            <Route path="/admin/dashboard" element={
+              <AdminRoute>
+                <AdminDashboard />
+              </AdminRoute>
+            } />
+            <Route path="/admin/users" element={
+              <AdminRoute>
+                <AdminUsers />
+              </AdminRoute>
+            } />
+            <Route path="/admin/plans" element={
+              <AdminRoute>
+                <AdminPlans />
+              </AdminRoute>
+            } />
+            <Route path="/admin/menus" element={
+              <AdminRoute>
+                <AdminMenus />
+              </AdminRoute>
+            } />
+            <Route path="/admin/menus/new" element={
+              <AdminRoute>
+                <AdminMenuForm />
+              </AdminRoute>
+            } />
+            <Route path="/admin/menus/:id" element={
+              <AdminRoute>
+                <AdminMenuForm />
+              </AdminRoute>
+            } />
+            
+            {/* Rotas exclusivas do Admin Simples - Bloqueiam acesso do Master */}
+            <Route path="/admin/settings" element={
+              <SimpleOnlyRoute>
+                <AdminSettings />
+              </SimpleOnlyRoute>
+            } />
+            <Route path="/admin/orders" element={
+              <SimpleOnlyRoute>
+                <AdminOrders />
+              </SimpleOnlyRoute>
+            } />
+            <Route path="/admin/coupons" element={
+              <SimpleOnlyRoute>
+                <AdminCoupons />
+              </SimpleOnlyRoute>
+            } />
+            {/* Mercado Pago - Admin Simples */}
+             {/* Mercado Pago - Admin Simples */}
+             <Route path="/admin/mercadopago" element={
+               <SimpleOnlyRoute>
+                 <AdminMercadoPago />
+               </SimpleOnlyRoute>
+             } />
+            
+            <Route path="/admin/gallery" element={
+              <AdminRoute>
+                <AdminGallery />
+              </AdminRoute>
+            } />
+            <Route path="/admin/suggestions" element={
+              <AdminRoute>
+                <AdminMealSuggestions />
+              </AdminRoute>
+            } />
+            <Route path="/admin/products" element={
+              <AdminRoute>
+                <AdminProducts />
+              </AdminRoute>
+            } />
             <Route path="/admin/products/new" element={
-              <Level3Route>
-                <AdminProductForm />
-              </Level3Route>
+              <AdminRoute>
+                <Level3Route>
+                  <AdminProductForm />
+                </Level3Route>
+              </AdminRoute>
             } />
             <Route path="/admin/products/:id" element={
-              <Level3Route>
-                <AdminProductForm />
-              </Level3Route>
+              <AdminRoute>
+                <Level3Route>
+                  <AdminProductForm />
+                </Level3Route>
+              </AdminRoute>
             } />
-            <Route path="/admin/orders" element={<AdminOrders />} />
-            <Route path="/admin/coupons" element={<AdminCoupons />} />
-            <Route path="/admin/level-config" element={<AdminLevelConfig />} />
+            {/* <Route path="/admin/level-config" element={
+              <AdminRoute>
+                <AdminLevelConfig />
+              </AdminRoute>
+            } /> */}
+
+
+
             <Route path="/delivery" element={<CustomerDelivery />} />
             <Route path="/delivery/orders/:orderId" element={<CustomerOrderTracking />} />
             <Route path="/checkout" element={<Checkout />} />
+            
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

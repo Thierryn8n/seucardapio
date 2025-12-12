@@ -2,11 +2,11 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BarChart3, Users, CreditCard, Settings, Image, Lightbulb, FileText, Package, ShoppingCart, Tag, Crown, LogOut, ArrowLeft } from "lucide-react";
+import { BarChart3, Users, CreditCard, Settings, Image, Lightbulb, FileText, Package, ShoppingCart, Tag, Crown, LogOut, ArrowLeft, DollarSign, PieChart } from "lucide-react";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { user, loading, isAdmin, isAdminMaster, signOut } = useAuth();
+  const { user, loading, isAdmin, signOut } = useAuth();
 
   if (loading) {
     return (
@@ -19,12 +19,12 @@ const AdminDashboard = () => {
     );
   }
 
-  if (!user || !isAdminMaster) {
+  if (!user || !isAdmin) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900">Acesso Negado</h1>
-          <p className="mt-2 text-gray-600">Você não tem permissão para acessar esta área. Apenas administradores master têm acesso.</p>
+          <p className="mt-2 text-gray-600">Você não tem permissão para acessar esta área. Apenas administradores têm acesso.</p>
           <Button 
             onClick={() => navigate("/admin/selector")}
             className="mt-4 bg-orange-500 hover:bg-orange-600"
@@ -94,18 +94,11 @@ const AdminDashboard = () => {
       color: "text-indigo-600"
     },
     {
-      title: "Planos e Assinaturas",
-      description: "Gerencie planos e assinaturas",
-      icon: CreditCard,
-      path: "/admin/plans",
-      color: "text-red-600"
-    },
-    {
-      title: "Configurações de Níveis",
-      description: "Configure acessos por plano e nível",
-      icon: Settings,
-      path: "/admin/level-config",
-      color: "text-indigo-600"
+      title: "Mercado Pago",
+      description: "Configure as credenciais de pagamento do seu estabelecimento",
+      icon: DollarSign,
+      path: "/admin/mercadopago",
+      color: "text-green-600"
     },
     {
       title: "Configurações Gerais",
@@ -118,7 +111,7 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header Exclusivo do Painel Administrativo Master */}
+      {/* Header do Painel Administrativo */}
       <header className="bg-gradient-to-r from-purple-900 via-purple-800 to-indigo-900 text-white shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-6">
@@ -128,13 +121,13 @@ const AdminDashboard = () => {
               </div>
               <div>
                 <div className="flex items-center gap-3">
-                  <h1 className="text-3xl font-bold text-white">Painel Administrativo Master</h1>
+                  <h1 className="text-3xl font-bold text-white">Painel Administrativo</h1>
                   <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-purple-900 px-3 py-1 rounded-full text-sm font-bold shadow-lg">
-                    MASTER
+                    ADMIN
                   </span>
                 </div>
                 <p className="text-purple-200 mt-1">
-                  Controle total do sistema • Acesso irrestrito
+                  Controle total do sistema
                 </p>
               </div>
             </div>
@@ -176,7 +169,7 @@ const AdminDashboard = () => {
                 onClick={() => navigate("/admin/dashboard")}
                 className="text-yellow-300 border-b-2 border-yellow-300 pb-2 font-medium"
               >
-                Dashboard Master
+                Dashboard
               </button>
               <button 
                 onClick={() => navigate("/admin/selector")}
@@ -199,7 +192,7 @@ const AdminDashboard = () => {
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900">Visão Geral do Sistema</h2>
           <p className="mt-2 text-gray-600">
-            Bem-vindo ao Painel Administrativo Master, {user.email}. Você tem acesso completo a todas as funcionalidades.
+            Bem-vindo ao Painel Administrativo, {user.email}. Você tem acesso completo a todas as funcionalidades.
           </p>
         </div>
 

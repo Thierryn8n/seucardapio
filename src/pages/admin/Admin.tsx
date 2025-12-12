@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogOut, Calendar, Plus, List, Settings, MessageSquare } from "lucide-react";
+import { LogOut, Calendar, Plus, List, Settings, MessageSquare, DollarSign } from "lucide-react";
 
 const Admin = () => {
   const { user, signOut, isAdmin, loading } = useAuth();
@@ -110,6 +110,18 @@ const Admin = () => {
                 <CardTitle>Sugestões de Refeições</CardTitle>
                 <CardDescription>
                   Gerencie as sugestões enviadas pelos colaboradores
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
+          <Link to={isAdmin ? "/admin/mercadopago" : "#"} className={!isAdmin ? "pointer-events-none opacity-50" : ""}>
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+              <CardHeader>
+                <DollarSign className="w-8 h-8 mb-2 text-green-600" />
+                <CardTitle>Mercado Pago</CardTitle>
+                <CardDescription>
+                  Configure suas credenciais de pagamento
                 </CardDescription>
               </CardHeader>
             </Card>

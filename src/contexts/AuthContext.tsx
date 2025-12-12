@@ -12,13 +12,10 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
-  isAdminMaster: boolean;
-  isAdminDelivery: boolean;
   userPlan: 'free' | 'professional' | 'premium' | null;
   updateUserRole: (userId: string, newRole: string) => Promise<{ success: boolean; error?: any }>;
   levelConfigs: LevelConfig[] | null;
   refreshLevelConfigs: () => Promise<void>;
-  getPanelForPlan: (plan: string) => 'simple' | 'master' | null;
 }
 
 interface LevelConfig {
@@ -43,8 +40,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isAdminMaster, setIsAdminMaster] = useState(false);
-  const [isAdminDelivery, setIsAdminDelivery] = useState(false);
   const [userPlan, setUserPlan] = useState<'free' | 'professional' | 'premium' | null>(null);
   const [levelConfigs, setLevelConfigs] = useState<LevelConfig[] | null>(null);
   const navigate = useNavigate();
@@ -65,8 +60,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }, 0);
         } else {
           setIsAdmin(false);
-          setIsAdminMaster(false);
-          setIsAdminDelivery(false);
           setUserPlan(null);
           setLevelConfigs(null);
         }
@@ -81,9 +74,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         checkAdminStatus(session.user.id);
         checkUserSubscription(session.user.id);
         refreshLevelConfigs();
-      } else {
-        setIsAdminMaster(false);
-        setIsAdminDelivery(false);
       }
       setLoading(false);
     });
@@ -92,47 +82,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const checkAdminStatus = async (userId: string) => {
-    // Check if user has admin role using multiple methods
+    // Check if user has admin role
     let isUserAdmin = false;
-    let isUserAdminMaster = false;
-    let isUserAdminDelivery = false;
 
-    // Method 1: Check user_roles table (Admin Master - Acesso total)
+    // Method 1: Check profiles table is_admin field
     try {
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .eq('role', 'admin')
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', userId)
         .maybeSingle();
       
-      if (!roleError && roleData?.role === 'admin') {
+      if (!profileError && profileData?.is_admin) {
         isUserAdmin = true;
-        isUserAdminMaster = true;
       }
     } catch (error) {
-      console.error('Erro ao verificar user_roles:', error);
+      console.error('Erro ao verificar profile is_admin:', error);
     }
 
-    // Method 2: Check profiles table is_admin field (Admin Delivery)
-    if (!isUserAdminMaster) {
-      try {
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', userId)
-          .maybeSingle();
-        
-        if (!profileError && profileData?.is_admin) {
-          isUserAdmin = true;
-          isUserAdminDelivery = true;
-        }
-      } catch (error) {
-        console.error('Erro ao verificar profile is_admin:', error);
-      }
-    }
-
-    // Method 3: Check encrypted role from users table (fallback)
+    // Method 2: Check encrypted role from users table (fallback)
     if (!isUserAdmin) {
       try {
         const { data: userData, error: userError } = await supabase
@@ -145,7 +113,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const decryptedRole = decryptUserRole(userData.role_encrypted, userId);
           if (decryptedRole === 'admin') {
             isUserAdmin = true;
-            isUserAdminDelivery = true;
           }
         }
       } catch (error) {
@@ -154,8 +121,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     setIsAdmin(isUserAdmin);
-    setIsAdminMaster(isUserAdminMaster);
-    setIsAdminDelivery(isUserAdminDelivery);
   };
 
   const checkUserSubscription = async (userId: string) => {
@@ -212,7 +177,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             menu_management: true,
             user_management: false,
             system_config: false,
-            active: true
+            active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           },
           {
             id: 'professional-config',
@@ -224,7 +191,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             menu_management: true,
             user_management: false,
             system_config: false,
-            active: true
+            active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           },
           {
             id: 'premium-config',
@@ -236,7 +205,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             menu_management: true,
             user_management: true,
             system_config: true,
-            active: true
+            active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           }
         ];
         setLevelConfigs(defaultConfigs);
@@ -255,7 +226,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           menu_management: true,
           user_management: false,
           system_config: false,
-          active: true
+          active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         },
         {
           id: 'professional-config',
@@ -267,7 +240,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           menu_management: true,
           user_management: false,
           system_config: false,
-          active: true
+          active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         },
         {
           id: 'premium-config',
@@ -279,18 +254,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           menu_management: true,
           user_management: true,
           system_config: true,
-          active: true
+          active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         }
       ];
       setLevelConfigs(defaultConfigs);
     }
-  };
-
-  const getPanelForPlan = (plan: string): 'simple' | 'master' | null => {
-    if (!levelConfigs) return null;
-    
-    const config = levelConfigs.find(config => config.plan_name === plan && config.active);
-    return config ? config.panel_type : null;
   };
 
   const signIn = async (email: string, password: string) => {
@@ -324,8 +294,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     await supabase.auth.signOut();
     setIsAdmin(false);
-    setIsAdminMaster(false);
-    setIsAdminDelivery(false);
     setUserPlan(null);
     setLevelConfigs(null);
     navigate('/');
@@ -351,8 +319,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Atualizar estado local se for o usuário atual
       if (user?.id === userId) {
         setIsAdmin(newRole === 'admin');
-        setIsAdminMaster(newRole === 'admin');
-        setIsAdminDelivery(newRole === 'admin');
       }
       
       return { success: true };
@@ -363,7 +329,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, isAdmin, isAdminMaster, isAdminDelivery, userPlan, updateUserRole, levelConfigs, refreshLevelConfigs, getPanelForPlan }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, isAdmin, userPlan, updateUserRole, levelConfigs, refreshLevelConfigs }}>
       {children}
     </AuthContext.Provider>
   );

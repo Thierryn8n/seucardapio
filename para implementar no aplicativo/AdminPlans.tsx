@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +10,8 @@ import { ArrowLeft, Check, Crown, Zap } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const AdminPlans = () => {
-  const { user, loading, isAdmin, userPlan } = useAuth();
+  const { user, loading, userPlan } = useAuth();
+  const { isMasterAdmin, isLoading: adminLoading } = useAdminStatus();
   const navigate = useNavigate();
   const { subscription } = useSubscription();
 
@@ -19,7 +21,7 @@ const AdminPlans = () => {
     }
   }, [user, loading, navigate]);
 
-  if (loading) {
+  if (loading || adminLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Skeleton className="w-12 h-12 rounded-full" />
@@ -27,17 +29,20 @@ const AdminPlans = () => {
     );
   }
 
-  if (!isAdmin) {
+  // Redirect to Mercado Pago page for regular admins
+  useEffect(() => {
+    if (!loading && !adminLoading && !isMasterAdmin) {
+      navigate("/admin/mercadopago");
+    }
+  }, [loading, adminLoading, isMasterAdmin, navigate]);
+
+  if (!isMasterAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Card className="border-destructive">
-          <CardHeader>
-            <CardTitle className="text-destructive">Acesso Negado</CardTitle>
-            <CardDescription>
-              Você não tem permissão para acessar esta página.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        <div className="text-center">
+          <Skeleton className="w-12 h-12 rounded-full mx-auto" />
+          <p className="mt-4 text-muted-foreground">Redirecionando...</p>
+        </div>
       </div>
     );
   }
