@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useCart, CartProvider } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { mercadoPagoService } from '@/integrations/mercadopago/mercadopago.service';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -111,24 +110,8 @@ const Checkout: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Criar descrição do pedido
-      const description = items.map((item: any) => 
-        `${item.quantity}x ${item.name || item.item?.name}`
-      ).join(', ');
+      const orderId = `order-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 
-      // Gerar ID único para o pedido
-      const orderId = `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-      // Criar pagamento no Mercado Pago
-      const paymentData = await mercadoPagoService.createPayment({
-        amount: total,
-        description: `Pedido ${orderId} - ${description}`,
-        payerEmail: formData.email,
-        payerName: formData.name,
-        externalReference: orderId,
-      });
-
-      // Salvar pedido no banco de dados
       const { error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -144,8 +127,7 @@ const Checkout: React.FC = () => {
           customer_zipcode: formData.zipCode.replace('-', ''),
           total_amount: total,
           status: 'pending',
-          payment_method: 'mercado_pago',
-          mercado_pago_preference_id: paymentData.id,
+          payment_method: 'on_delivery',
           items: items.map((item: any) => ({
             id: item.id,
             name: item.name || item.item?.name,
@@ -159,11 +141,9 @@ const Checkout: React.FC = () => {
         throw new Error('Erro ao salvar pedido');
       }
 
-      // Limpar carrinho
       clearCart();
-
-      // Redirecionar para o Mercado Pago
-      window.location.href = paymentData.init_point;
+      toast({ title: 'Pedido enviado', description: 'O pagamento será feito na entrega.' });
+      navigate('/');
 
     } catch (error) {
       console.error('Erro ao processar checkout:', error);
@@ -396,7 +376,7 @@ const Checkout: React.FC = () => {
             </Button>
 
             <p className="text-xs text-gray-500 text-center">
-              Você será redirecionado para o Mercado Pago para concluir o pagamento de forma segura.
+              O pagamento é feito na entrega do pedido.
             </p>
           </div>
         </div>

@@ -121,7 +121,7 @@ const Admin = () => {
                 <DollarSign className="w-8 h-8 mb-2 text-green-600" />
                 <CardTitle>Mercado Pago</CardTitle>
                 <CardDescription>
-                  Configure suas credenciais de pagamento
+                  Conecte a conta que recebe as assinaturas
                 </CardDescription>
               </CardHeader>
             </Card>

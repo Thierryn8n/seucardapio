@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { decryptUserRole } from '@/integrations/mercadopago/mercadopago.encryption';
+import { decryptUserRole } from '@/lib/role-encryption';
 
 interface AuthContextType {
   user: User | null;
@@ -302,7 +302,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateUserRole = async (userId: string, newRole: string) => {
     try {
-      const { encryptUserRole } = await import('@/integrations/mercadopago/mercadopago.encryption');
+      const { encryptUserRole } = await import('@/lib/role-encryption');
       const encryptedRole = encryptUserRole(newRole, userId);
       
       const { error } = await supabase

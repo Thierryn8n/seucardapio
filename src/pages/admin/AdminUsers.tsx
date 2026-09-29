@@ -8,7 +8,7 @@ import { Users, Search, Filter, UserPlus, Mail, Calendar, Crown } from "lucide-r
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { decryptUserRole } from "@/integrations/mercadopago/mercadopago.encryption";
+import { decryptUserRole } from "@/lib/role-encryption";
 
 const AdminUsers = () => {
   const navigate = useNavigate();

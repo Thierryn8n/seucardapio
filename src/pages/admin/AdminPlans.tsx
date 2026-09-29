@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
 import { usePlanValidation } from "@/hooks/usePlanValidation";
-import { mercadoPagoService } from "@/integrations/mercadopago";
+import { subscribeToPlan } from "@/lib/mercadopago";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,12 +17,6 @@ const AdminPlans = () => {
   const { isValid, planStatus, validatePlan } = usePlanValidation();
   const { toast } = useToast();
   const [isProcessingUpgrade, setIsProcessingUpgrade] = useState(false);
-
-  useEffect(() => {
-    if (user?.id) {
-      fetchSubscription();
-    }
-  }, [user?.id]);
 
   useEffect(() => {
     if (user?.id) {
@@ -119,22 +113,13 @@ const AdminPlans = () => {
     setIsProcessingUpgrade(true);
     
     try {
-      const { data, error } = await mercadoPagoService.createSubscription(planId);
-      
-      if (error) {
-        toast({
-          title: "Erro ao processar upgrade",
-          description: error.message,
-          variant: "destructive"
-        });
-      } else if (data?.init_point) {
-        // Redirecionar para o Mercado Pago
-        window.location.href = data.init_point;
-      }
+      const initPoint = await subscribeToPlan(planId, `${window.location.origin}/admin/plans`, user?.email ?? undefined);
+      if (window.self !== window.top) window.open(initPoint, "_blank", "noopener");
+      else window.location.href = initPoint;
     } catch (error) {
       toast({
         title: "Erro ao processar upgrade",
-        description: "Ocorreu um erro ao tentar processar o upgrade do plano.",
+        description: error instanceof Error ? error.message : "Tente novamente.",
         variant: "destructive"
       });
     } finally {

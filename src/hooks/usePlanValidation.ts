@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { mercadoPagoService } from '@/integrations/mercadopago';
+import { syncSubscription } from '@/lib/mercadopago';
 
 interface PlanValidation {
   isValid: boolean;
@@ -50,54 +49,16 @@ export const usePlanValidation = () => {
 
       // Para planos pagos, validar com Mercado Pago
       if (subscription.mercado_pago_subscription_id) {
-        const subscriptionStatus = await mercadoPagoService.getSubscription(
-          subscription.mercado_pago_subscription_id
-        );
+        const { subscription: synced } = await syncSubscription();
+        const status = (synced?.status as string | undefined) ?? subscription.status;
 
-        if (subscriptionStatus && subscriptionStatus.status) {
-          const isValid = subscriptionStatus.status === 'active' || 
-                         subscriptionStatus.status === 'pending';
-
-          // Atualizar status no banco de dados se diferente
-          if (subscriptionStatus.status !== subscription.status) {
-            await supabase
-              .from('subscriptions')
-              .update({ 
-                status: subscriptionStatus.status,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', subscription.id);
-          }
-
-          setValidation({
-            isValid,
-            isLoading: false,
-            planStatus: subscriptionStatus.status as any,
-            lastValidation: new Date(),
-            error: null,
-          });
-        } else {
-          throw new Error('Não foi possível validar a assinatura');
-        }
-      } else if (subscription.mercado_pago_payment_id) {
-        // Validação para pagamento único (planos lifetime)
-        const paymentStatus = await mercadoPagoService.getPayment(
-          subscription.mercado_pago_payment_id
-        );
-
-        if (paymentStatus && paymentStatus.status) {
-          const isValid = paymentStatus.status === 'approved';
-
-          setValidation({
-            isValid,
-            isLoading: false,
-            planStatus: paymentStatus.status === 'approved' ? 'active' : 'cancelled',
-            lastValidation: new Date(),
-            error: null,
-          });
-        } else {
-          throw new Error('Não foi possível validar o pagamento');
-        }
+        setValidation({
+          isValid: status === 'active' || status === 'pending',
+          isLoading: false,
+          planStatus: status as PlanValidation['planStatus'],
+          lastValidation: new Date(),
+          error: null,
+        });
       } else {
         // Se não tem ID do Mercado Pago, verificar status local
         const isValid = subscription.status === 'active' || 
