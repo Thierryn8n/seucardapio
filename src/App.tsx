@@ -7,7 +7,7 @@ import { PlatformBranding } from "@/components/PlatformBranding";
 import { AuthProvider } from "./contexts/AuthContext";
 import { Level3Route } from "./components/Level3Route";
 import { AdminRoute, SimpleOnlyRoute } from "./components/routes";
-import Landing from "./pages/Landing";
+import HomeRoute from "./components/HomeRoute";
 import Menu from "./pages/Menu";
 import DailyMenu from "./pages/DailyMenu";
 import AdminDailyMenu from "./pages/admin/AdminDailyMenu";
@@ -47,7 +47,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            <Route path="/" element={<Landing />} />
+            <Route path="/" element={<HomeRoute />} />
             <Route path="/:id/cardapio" element={<DailyMenu />} />
             <Route path="/:id/semanal" element={<Menu />} />
             <Route path="/auth" element={<Auth />} />
