@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/db";
 import { fetchSizes, formatBRL, type MarmitaSize } from "@/lib/daily-menu";
@@ -14,6 +18,8 @@ export function SizesEditor({ userId }: { userId: string }) {
   const { toast } = useToast();
   const { data: sizes = [] } = useQuery({ queryKey: ["sizes", userId], queryFn: () => fetchSizes(userId) });
   const [form, setForm] = useState({ name: "", price: "", max: "2" });
+  const [pendingDelete, setPendingDelete] = useState<MarmitaSize | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const refresh = () => qc.invalidateQueries({ queryKey: ["sizes", userId] });
   const fail = (e: { message: string } | null) => { if (e) toast({ title: "Erro", description: e.message, variant: "destructive" }); return !!e; };
 
@@ -32,9 +38,15 @@ export function SizesEditor({ userId }: { userId: string }) {
   const update = async (s: MarmitaSize, patch: Partial<MarmitaSize>) => {
     if (!fail((await db.from("marmita_sizes").update(patch).eq("id", s.id).eq("user_id", userId)).error)) refresh();
   };
-  const remove = async (s: MarmitaSize) => {
-    if (!confirm(`Remover o tamanho ${s.name}?`)) return;
-    if (!fail((await db.from("marmita_sizes").delete().eq("id", s.id).eq("user_id", userId)).error)) refresh();
+  const confirmRemove = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    const { error } = await db.from("marmita_sizes").delete().eq("id", pendingDelete.id).eq("user_id", userId);
+    setDeleting(false);
+    if (fail(error)) return;
+    refresh();
+    toast({ title: `Tamanho ${pendingDelete.name} removido` });
+    setPendingDelete(null);
   };
 
   return (
@@ -52,7 +64,7 @@ export function SizesEditor({ userId }: { userId: string }) {
               <Switch checked={s.active} onCheckedChange={(v) => update(s, { active: v })} aria-label={`Ativar ${s.name}`} />
               Ativo
             </label>
-            <Button variant="ghost" size="icon" onClick={() => remove(s)} aria-label={`Remover ${s.name}`}><Trash2 className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" onClick={() => setPendingDelete(s)} aria-label={`Remover ${s.name}`}><Trash2 className="h-4 w-4" /></Button>
           </li>
         ))}
         {!sizes.length && <li className="text-sm text-muted-foreground">Nenhum tamanho cadastrado. Adicione abaixo ou cole sua lista na aba Cardápio.</li>}
@@ -63,6 +75,21 @@ export function SizesEditor({ userId }: { userId: string }) {
         <div className="flex flex-col gap-2"><Label htmlFor="s-max">Máx. proteínas</Label><Input id="s-max" required type="number" min={1} max={10} value={form.max} onChange={(e) => setForm({ ...form, max: e.target.value })} /></div>
         <Button type="submit" className="gap-2"><Plus className="h-4 w-4" aria-hidden />Adicionar</Button>
       </form>
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover tamanho {pendingDelete?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>Essa marmita deixará de aparecer para os clientes. Essa ação não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemove} disabled={deleting} className="gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting && <Loader2 className="h-4 w-4 animate-spin" />}Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

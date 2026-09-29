@@ -8,6 +8,10 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/db";
 import {
@@ -86,6 +90,8 @@ export function MenuEditor({ userId }: { userId: string }) {
   const [pasteText, setPasteText] = useState("");
   const [busy, setBusy] = useState(false);
   const [newSec, setNewSec] = useState<{ name: string; kind: SectionKind }>({ name: "", kind: "protein" });
+  const [pendingRemoveSection, setPendingRemoveSection] = useState<MenuSection | null>(null);
+  const [removingSection, setRemovingSection] = useState(false);
 
   const menuKey = ["daily-menu", userId, date];
   const { data: menu, isLoading } = useQuery({ queryKey: menuKey, queryFn: () => fetchMenuByDate(userId, date) });
@@ -167,9 +173,15 @@ export function MenuEditor({ userId }: { userId: string }) {
 
   const updateItem = async (i: MenuItem, p: Partial<MenuItem>) => { if (!fail((await db.from("menu_section_items").update(p).eq("id", i.id).eq("user_id", userId)).error)) refresh(); };
   const removeItem = async (i: MenuItem) => { if (!fail((await db.from("menu_section_items").delete().eq("id", i.id).eq("user_id", userId)).error)) refresh(); };
-  const removeSection = async (s: MenuSection) => {
-    if (!confirm(`Remover a seção ${s.name} e seus itens?`)) return;
-    if (!fail((await db.from("menu_sections").delete().eq("id", s.id).eq("user_id", userId)).error)) refresh();
+  const confirmRemoveSection = async () => {
+    if (!pendingRemoveSection) return;
+    setRemovingSection(true);
+    const { error } = await db.from("menu_sections").delete().eq("id", pendingRemoveSection.id).eq("user_id", userId);
+    setRemovingSection(false);
+    if (fail(error)) return;
+    refresh();
+    toast({ title: `Seção ${pendingRemoveSection.name} removida` });
+    setPendingRemoveSection(null);
   };
   const addItem = async (s: MenuSection, name: string, price: number) => {
     const { error } = await db.from("menu_section_items").insert({ section_id: s.id, user_id: userId, name, price, display_order: s.items.length });
@@ -212,7 +224,7 @@ export function MenuEditor({ userId }: { userId: string }) {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {menu.sections.map((s) => (
-            <SectionCard key={s.id} section={s} onAddItem={(n, p) => addItem(s, n, p)} onUpdateItem={updateItem} onRemoveItem={removeItem} onRemove={() => removeSection(s)} />
+            <SectionCard key={s.id} section={s} onAddItem={(n, p) => addItem(s, n, p)} onUpdateItem={updateItem} onRemoveItem={removeItem} onRemove={() => setPendingRemoveSection(s)} />
           ))}
         </div>
       )}
@@ -245,6 +257,21 @@ export function MenuEditor({ userId }: { userId: string }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!pendingRemoveSection} onOpenChange={(open) => !open && setPendingRemoveSection(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover a seção {pendingRemoveSection?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>Todos os itens dessa seção também serão removidos. Essa ação não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removingSection}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemoveSection} disabled={removingSection} className="gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {removingSection && <Loader2 className="h-4 w-4 animate-spin" />}Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
