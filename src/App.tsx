@@ -11,6 +11,7 @@ import Menu from "./pages/Menu";
 import DailyMenu from "./pages/DailyMenu";
 import AdminDailyMenu from "./pages/admin/AdminDailyMenu";
 import Auth from "./pages/Auth";
+import AuthCallback from "./pages/AuthCallback";
 import CustomerDelivery from "./pages/CustomerDelivery";
 import CustomerOrderTracking from "./pages/CustomerOrderTracking";
 import Checkout from "./pages/Checkout";
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="/:id/cardapio" element={<DailyMenu />} />
             <Route path="/:id/semanal" element={<Menu />} />
             <Route path="/auth" element={<Auth />} />
+ <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/admin/cardapio-do-dia" element={
               <AdminRoute>
                 <AdminDailyMenu />

@@ -71,7 +71,7 @@ const Auth = () => {
       } else {
         toast({
           title: "Conta criada com sucesso!",
-          description: "Faça login para continuar.",
+          description: "Enviamos um link de confirmação para seu e-mail. Confirme para poder entrar.",
         });
       }
     } catch (error: any) {
