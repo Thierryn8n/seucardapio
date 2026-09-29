@@ -23,7 +23,7 @@ function slugify(value: string) {
 }
 
 async function generateWithNvidia(prompt: string): Promise<Buffer> {
-  const apiKey = process.env.NVIDIA_API_KEY;
+  const apiKey = process.env.NVIDIA_API_KEY_2 || process.env.NVIDIA_API_KEY;
   if (!apiKey) {
     throw new Error("NVIDIA_API_KEY não configurada.");
   }
