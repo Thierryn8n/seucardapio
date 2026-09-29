@@ -1,52 +1,58 @@
-import { Link } from "react-router-dom";
-import { ArrowLeft, ExternalLink } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
+import { ClipboardList, ExternalLink, Soup, Store, UtensilsCrossed } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
-import { db } from "@/lib/db";
+import { AdminShell, useStorePath } from "@/components/admin-shell/AdminShell";
 import { OrdersBoard } from "@/components/admin-daily/OrdersBoard";
 import { MenuEditor } from "@/components/admin-daily/MenuEditor";
 import { SizesEditor } from "@/components/admin-daily/SizesEditor";
 import { StoreSettings } from "@/components/admin-daily/StoreSettings";
 
+const TABS = [
+  { value: "orders", label: "Pedidos", icon: ClipboardList },
+  { value: "menu", label: "Cardápio", icon: UtensilsCrossed },
+  { value: "sizes", label: "Marmitas", icon: Soup },
+  { value: "settings", label: "Loja", icon: Store },
+];
+
 export default function AdminDailyMenu() {
   const { user } = useAuth();
-  const { data: slug } = useQuery({
-    queryKey: ["my-slug", user?.id],
-    enabled: !!user,
-    queryFn: async () => (await db.from("profiles").select("slug").eq("id", user!.id).maybeSingle()).data?.slug as string | null,
-  });
+  const storePath = useStorePath();
   if (!user) return null;
-  const publicPath = `/${slug || user.id}/cardapio`;
 
   return (
-    <div className="min-h-screen bg-background font-poppins text-foreground">
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto flex items-center justify-between gap-4 px-4 py-4">
-          <div className="flex items-center gap-3">
-            <Button asChild variant="ghost" size="icon" aria-label="Voltar"><Link to="/admin"><ArrowLeft className="h-5 w-5" /></Link></Button>
-            <h1 className="font-playfair text-2xl font-bold">Cardápio do dia</h1>
-          </div>
-          <Button asChild variant="outline" className="gap-2">
-            <a href={publicPath} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" aria-hidden />Ver como cliente</a>
-          </Button>
-        </div>
-      </header>
-      <main className="container mx-auto px-4 py-6">
-        <Tabs defaultValue="orders" className="flex flex-col gap-6">
-          <TabsList className="self-start">
-            <TabsTrigger value="orders">Pedidos</TabsTrigger>
-            <TabsTrigger value="menu">Cardápio</TabsTrigger>
-            <TabsTrigger value="sizes">Marmitas</TabsTrigger>
-            <TabsTrigger value="settings">Loja</TabsTrigger>
-          </TabsList>
-          <TabsContent value="orders"><OrdersBoard userId={user.id} /></TabsContent>
-          <TabsContent value="menu"><MenuEditor userId={user.id} /></TabsContent>
-          <TabsContent value="sizes"><SizesEditor userId={user.id} /></TabsContent>
-          <TabsContent value="settings"><StoreSettings userId={user.id} /></TabsContent>
-        </Tabs>
-      </main>
-    </div>
+    <AdminShell
+      title="Cardápio do dia"
+      subtitle="Pedidos, itens e configurações da loja"
+      actions={
+        <a
+          href={storePath}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="skeuo-raised skeuo-press flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium"
+        >
+          <ExternalLink className="h-4 w-4" aria-hidden />
+          <span className="hidden sm:inline">Ver como cliente</span>
+        </a>
+      }
+    >
+      <Tabs defaultValue="orders" className="mx-auto flex max-w-6xl flex-col gap-6">
+        <TabsList className="skeuo-inset h-auto flex-wrap justify-start gap-1 self-start rounded-2xl bg-transparent p-1.5">
+          {TABS.map(({ value, label, icon: Icon }) => (
+            <TabsTrigger
+              key={value}
+              value={value}
+              className="gap-2 rounded-xl px-4 py-2 text-muted-foreground data-[state=active]:skeuo-primary data-[state=active]:bg-transparent data-[state=active]:text-primary-foreground data-[state=active]:shadow-none"
+            >
+              <Icon className="h-4 w-4" aria-hidden />
+              {label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        <TabsContent value="orders"><OrdersBoard userId={user.id} /></TabsContent>
+        <TabsContent value="menu"><MenuEditor userId={user.id} /></TabsContent>
+        <TabsContent value="sizes"><SizesEditor userId={user.id} /></TabsContent>
+        <TabsContent value="settings"><StoreSettings userId={user.id} /></TabsContent>
+      </Tabs>
+    </AdminShell>
   );
 }
