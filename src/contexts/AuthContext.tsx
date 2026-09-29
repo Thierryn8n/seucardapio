@@ -12,6 +12,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
+  roleLoading: boolean;
   userPlan: 'free' | 'professional' | 'premium' | null;
   updateUserRole: (userId: string, newRole: string) => Promise<{ success: boolean; error?: any }>;
   levelConfigs: LevelConfig[] | null;
@@ -39,6 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [roleLoading, setRoleLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [userPlan, setUserPlan] = useState<'free' | 'professional' | 'premium' | null>(null);
   const [levelConfigs, setLevelConfigs] = useState<LevelConfig[] | null>(null);
@@ -47,34 +49,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        
+
         // Check admin status and subscription
         if (session?.user) {
-          setTimeout(() => {
-            checkAdminStatus(session.user.id);
-            checkUserSubscription(session.user.id);
-            refreshLevelConfigs();
+          setRoleLoading(true);
+          const userId = session.user.id;
+          // Defer to avoid running inside the onAuthStateChange callback itself
+          setTimeout(async () => {
+            await Promise.all([
+              checkAdminStatus(userId),
+              checkUserSubscription(userId),
+              refreshLevelConfigs(),
+            ]);
+            setRoleLoading(false);
           }, 0);
         } else {
           setIsAdmin(false);
           setUserPlan(null);
           setLevelConfigs(null);
+          setRoleLoading(false);
         }
       }
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        checkAdminStatus(session.user.id);
-        checkUserSubscription(session.user.id);
-        refreshLevelConfigs();
+        await Promise.all([
+          checkAdminStatus(session.user.id),
+          checkUserSubscription(session.user.id),
+          refreshLevelConfigs(),
+        ]);
       }
+      setRoleLoading(false);
       setLoading(false);
     });
 
@@ -330,7 +342,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, isAdmin, userPlan, updateUserRole, levelConfigs, refreshLevelConfigs }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, isAdmin, roleLoading, userPlan, updateUserRole, levelConfigs, refreshLevelConfigs }}>
       {children}
     </AuthContext.Provider>
   );

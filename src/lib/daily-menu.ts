@@ -14,7 +14,7 @@ export const SECTION_KINDS: { value: SectionKind; label: string; hint: string }[
 export const kindLabel = (k: SectionKind) => SECTION_KINDS.find((s) => s.value === k)?.label ?? k;
 export const isPaidKind = (k: SectionKind) => k === "drink" || k === "dessert" || k === "extra";
 
-export interface MenuItem { id: string; section_id: string; name: string; price: number; available: boolean; display_order: number }
+export interface MenuItem { id: string; section_id: string; name: string; price: number; available: boolean; display_order: number; image_url: string | null }
 export interface MenuSection { id: string; daily_menu_id: string; name: string; kind: SectionKind; display_order: number; items: MenuItem[] }
 export interface DailyMenu { id: string; user_id: string; menu_date: string; notes: string | null; is_published: boolean; sections: MenuSection[] }
 export interface MarmitaSize { id: string; user_id: string; name: string; description: string | null; price: number; max_proteins: number; active: boolean; display_order: number }

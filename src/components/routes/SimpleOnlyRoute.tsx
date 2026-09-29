@@ -7,10 +7,10 @@ interface SimpleOnlyRouteProps {
 }
 
 export const SimpleOnlyRoute: React.FC<SimpleOnlyRouteProps> = ({ children }) => {
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isAdmin, loading, roleLoading } = useAuth();
   const location = useLocation();
 
-  if (loading) {
+  if (loading || (user && roleLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex items-center space-x-2">
