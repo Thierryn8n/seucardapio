@@ -1,10 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
-
-const SUPABASE_URL = import.meta.env.NEXT_PUBLIC_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL;
-const ANON_KEY =
-  import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+import { supabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY as ANON_KEY } from "@/integrations/supabase/client";
 
 export const MP_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/mercadopago`;
 export const MP_CALLBACK_URL = `${MP_FUNCTION_URL}/oauth/callback`;
