@@ -2,11 +2,12 @@ import type { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  BarChart3, CalendarDays, CreditCard, Crown, Image, LayoutGrid, Lock, LogOut, Menu,
+  BarChart3, CalendarDays, CreditCard, Crown, Image, LayoutGrid, Loader2, Lock, LogOut, Menu,
   MessageSquare, Package, Settings, Ticket, Truck, UtensilsCrossed, Users, type LucideIcon,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Onboarding } from "@/components/onboarding/Onboarding";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/lib/db";
 import { cn } from "@/lib/utils";
@@ -145,21 +146,34 @@ export function AdminShell({
   actions?: ReactNode;
   children: ReactNode;
 }) {
-  return (
-    <div className="admin-shell relative min-h-screen font-poppins text-foreground">
-      <div aria-hidden className="fixed inset-0 -z-10 bg-background">
-        <img src="/images/admin-bg.png" alt="" className="h-full w-full object-cover opacity-60" />
-        <div className="absolute inset-0 bg-background/70" />
-      </div>
+  const { user, isAdmin } = useAuth();
+  const { data: onboarded, isLoading } = useQuery({
+    queryKey: ["onboarding", user?.id],
+    enabled: !!user,
+    queryFn: async () =>
+      (await db.from("profiles").select("onboarding_completed").eq("id", user!.id).maybeSingle()).data
+        ?.onboarding_completed ?? false,
+  });
 
+  if (user && isLoading) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-background">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" aria-label="Carregando" />
+      </div>
+    );
+  }
+  if (user && onboarded === false) return <Onboarding userId={user.id} isAdmin={isAdmin} />;
+
+  return (
+    <div className="admin-shell relative min-h-dvh bg-background font-poppins text-foreground">
       <aside className="glass fixed inset-y-3 left-3 z-30 hidden w-64 rounded-3xl lg:block">
         <SidebarContent />
       </aside>
 
-      <div className="flex min-h-screen flex-col lg:pl-72">
+      <div className="flex min-h-dvh flex-col pb-20 lg:pb-0 lg:pl-72">
         <header className="sticky top-0 z-20 px-3 pt-3 lg:px-6">
-          <div className="glass flex items-center justify-between gap-4 rounded-2xl px-4 py-3">
-            <div className="flex min-w-0 items-center gap-3">
+          <div className="glass flex flex-wrap items-center justify-between gap-3 rounded-2xl px-3 py-2.5 sm:px-4 sm:py-3">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
               <Sheet>
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon" className="skeuo-raised skeuo-press lg:hidden" aria-label="Abrir menu">
@@ -172,15 +186,51 @@ export function AdminShell({
                 </SheetContent>
               </Sheet>
               <div className="min-w-0">
-                <h1 className="truncate font-playfair text-xl font-bold md:text-2xl text-balance">{title}</h1>
-                {subtitle && <p className="truncate text-sm text-muted-foreground">{subtitle}</p>}
+                <h1 className="truncate font-playfair text-lg font-bold sm:text-xl md:text-2xl">{title}</h1>
+                {subtitle && <p className="hidden truncate text-sm text-muted-foreground sm:block">{subtitle}</p>}
               </div>
             </div>
-            {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+            {actions && <div className="flex w-full items-center gap-2 overflow-x-auto sm:w-auto sm:shrink-0">{actions}</div>}
           </div>
         </header>
-        <main className="flex-1 px-3 py-6 lg:px-6">{children}</main>
+        <main className="flex-1 px-3 py-4 sm:py-6 lg:px-6">{children}</main>
       </div>
+
+      <MobileTabBar />
     </div>
+  );
+}
+
+function MobileTabBar() {
+  const { pathname } = useLocation();
+  const items = useSections()
+    .flatMap((s) => s.items)
+    .filter((i) => !i.locked)
+    .slice(0, 4);
+  if (items.length < 2) return null;
+  return (
+    <nav
+      aria-label="Navegação rápida"
+      className="glass fixed inset-x-3 bottom-3 z-30 flex items-stretch justify-around rounded-2xl p-1.5 lg:hidden"
+      style={{ paddingBottom: "max(0.375rem, env(safe-area-inset-bottom))" }}
+    >
+      {items.map(({ to, label, icon: Icon }) => {
+        const active = pathname === to;
+        return (
+          <Link
+            key={to}
+            to={to}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              "skeuo-press flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[11px] font-medium",
+              active ? "skeuo-raised text-foreground" : "text-muted-foreground",
+            )}
+          >
+            <Icon className={cn("h-5 w-5", active && "text-primary")} aria-hidden />
+            <span className="w-full truncate text-center">{label}</span>
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
