@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
@@ -96,17 +96,32 @@ export default function DailyMenu() {
 
   const dateLabel = format(parseISO(date), "EEEE, d 'de' MMMM", { locale: ptBR });
 
+  const themeVars = {
+    "--background": restaurant.background_color,
+    "--foreground": restaurant.foreground_color,
+    "--card": restaurant.card_color,
+    "--card-foreground": restaurant.foreground_color,
+    "--primary": restaurant.primary_color,
+    "--secondary": restaurant.secondary_color,
+    "--accent": restaurant.accent_color,
+    "--ring": restaurant.primary_color,
+  } as CSSProperties;
+
   return (
-    <div className="min-h-screen bg-background font-poppins text-foreground">
+    <div className="min-h-screen bg-background font-poppins text-foreground" style={themeVars}>
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-2xl items-center gap-4 px-4 py-5">
-          {restaurant.logo_url ? (
-            <img src={restaurant.logo_url} alt={`Logo ${restaurant.name}`} className="h-14 w-14 rounded-full border border-border object-cover" />
-          ) : (
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground"><UtensilsCrossed className="h-6 w-6" aria-hidden /></div>
-          )}
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-border bg-background">
+            {restaurant.logo_url ? (
+              <img src={restaurant.logo_url} alt={`Logo ${restaurant.name}`} className="h-full w-full object-contain p-1" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-primary text-primary-foreground"><UtensilsCrossed className="h-6 w-6" aria-hidden /></div>
+            )}
+          </div>
           <div className="flex min-w-0 flex-col">
-            <h1 className="font-playfair text-2xl font-bold leading-tight text-balance">{restaurant.name}</h1>
+            {restaurant.show_company_name && (
+              <h1 className="font-playfair text-2xl font-bold leading-tight text-balance">{restaurant.name}</h1>
+            )}
             <p className="text-sm capitalize text-muted-foreground">Cardápio de {dateLabel}</p>
           </div>
         </div>

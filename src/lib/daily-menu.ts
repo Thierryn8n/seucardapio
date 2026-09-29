@@ -30,6 +30,13 @@ export interface Restaurant {
   delivery_fee: number;
   delivery_enabled: boolean;
   estimated_time: string | null;
+  show_company_name: boolean;
+  primary_color: string;
+  secondary_color: string;
+  accent_color: string;
+  background_color: string;
+  foreground_color: string;
+  card_color: string;
 }
 
 export interface OrderLine {
@@ -141,7 +148,13 @@ export async function fetchRestaurant(idOrSlug: string): Promise<Restaurant | nu
   if (error) throw error;
   if (!profile) return null;
   const [{ data: s }, { data: d }] = await Promise.all([
-    db.from("settings").select("company_name, logo_url, whatsapp_number, accepts_delivery, accepts_pickup").eq("user_id", profile.id).maybeSingle(),
+    db
+      .from("settings")
+      .select(
+        "company_name, logo_url, whatsapp_number, accepts_delivery, accepts_pickup, show_company_name, primary_color, secondary_color, accent_color, menu_background_color, menu_foreground_color, menu_card_color",
+      )
+      .eq("user_id", profile.id)
+      .maybeSingle(),
     db.from("delivery_settings").select("delivery_fee, delivery_enabled, estimated_time").eq("user_id", profile.id).maybeSingle(),
   ]);
   return {
@@ -155,6 +168,13 @@ export async function fetchRestaurant(idOrSlug: string): Promise<Restaurant | nu
     delivery_fee: Number(d?.delivery_fee ?? 0),
     delivery_enabled: d?.delivery_enabled ?? true,
     estimated_time: d?.estimated_time ?? null,
+    show_company_name: s?.show_company_name ?? true,
+    primary_color: s?.primary_color || "20 85% 55%",
+    secondary_color: s?.secondary_color || "140 45% 50%",
+    accent_color: s?.accent_color || "15 90% 60%",
+    background_color: s?.menu_background_color || "30 25% 98%",
+    foreground_color: s?.menu_foreground_color || "25 30% 15%",
+    card_color: s?.menu_card_color || "0 0% 100%",
   };
 }
 

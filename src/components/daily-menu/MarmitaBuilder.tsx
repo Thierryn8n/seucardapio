@@ -35,7 +35,19 @@ function Step({ n, title, hint, children }: { n: number; title: string; hint?: s
   );
 }
 
-function Chip({ selected, disabled, onClick, children }: { selected: boolean; disabled?: boolean; onClick: () => void; children: React.ReactNode }) {
+function Chip({
+  selected,
+  disabled,
+  onClick,
+  image,
+  children,
+}: {
+  selected: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  image?: string | null;
+  children: React.ReactNode;
+}) {
   return (
     <button
       type="button"
@@ -43,11 +55,15 @@ function Chip({ selected, disabled, onClick, children }: { selected: boolean; di
       disabled={disabled}
       aria-pressed={selected}
       className={cn(
-        "flex min-h-11 items-center gap-2 rounded-full border px-4 py-2 text-left text-sm font-medium transition-colors",
+        "flex min-h-11 items-center gap-2 rounded-full border py-1.5 text-left text-sm font-medium transition-colors",
+        image ? "pl-1.5 pr-4" : "px-4",
         selected ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground hover:border-primary/60",
         disabled && !selected && "cursor-not-allowed opacity-40",
       )}
     >
+      {image && (
+        <img src={image} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
+      )}
       {selected && <Check className="h-4 w-4 shrink-0" aria-hidden />}
       <span className="text-pretty">{children}</span>
     </button>
@@ -138,6 +154,7 @@ export function MarmitaBuilder({ sizes, proteinSections, sideSections, onAdd }: 
                 selected={proteins.includes(i.id)}
                 disabled={max > 1 && proteins.length >= max}
                 onClick={() => toggle(proteins, setProteins, i.id, max)}
+                image={i.image_url}
               >
                 {i.name}
               </Chip>
@@ -152,7 +169,7 @@ export function MarmitaBuilder({ sizes, proteinSections, sideSections, onAdd }: 
         <Step n={3} title="Guarnições" hint="Incluídas no preço. Marque o que quiser.">
           <div className="flex flex-wrap gap-2">
             {sideItems.map((i) => (
-              <Chip key={i.id} selected={sides.includes(i.id)} onClick={() => toggle(sides, setSides, i.id)}>
+              <Chip key={i.id} selected={sides.includes(i.id)} onClick={() => toggle(sides, setSides, i.id)} image={i.image_url}>
                 {i.name}
               </Chip>
             ))}

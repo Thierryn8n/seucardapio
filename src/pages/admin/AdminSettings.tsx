@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSettings } from "@/hooks/useSettings";
+import { useSettings, type Settings } from "@/hooks/useSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,8 +9,38 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Palette, Type, Calendar, Heart, Image, Loader2 } from "lucide-react";
+import { ArrowLeft, Palette, Type, Calendar, Heart, Image, Loader2, Wand2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { extractPaletteFromImage, hexToHslString, hslStringToHex } from "@/lib/color-utils";
+
+function ColorField({
+  id,
+  label,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={hslStringToHex(value || "0 0% 50%")}
+          onChange={(e) => onChange(hexToHslString(e.target.value))}
+          className="h-10 w-16 shrink-0 cursor-pointer rounded border"
+          aria-label={`Selecionar ${label}`}
+        />
+        <Input id={id} value={value} onChange={(e) => onChange(e.target.value)} placeholder="20 85% 55%" className="flex-1" />
+      </div>
+      <div className="h-12 w-full rounded-lg border shadow-sm" style={{ backgroundColor: `hsl(${value})` }} />
+    </div>
+  );
+}
 
 export default function AdminSettings() {
   const navigate = useNavigate();
@@ -18,6 +48,7 @@ export default function AdminSettings() {
   const { settings, isLoading, updateSettings } = useSettings();
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
+  const [extracting, setExtracting] = useState(false);
 
   useEffect(() => {
     if (!user) navigate("/auth");
@@ -30,6 +61,10 @@ export default function AdminSettings() {
     primary_color: "",
     secondary_color: "",
     accent_color: "",
+    show_company_name: true,
+    menu_background_color: "",
+    menu_foreground_color: "",
+    menu_card_color: "",
     title_font: "",
     body_font: "",
     show_sunday: false,
@@ -52,6 +87,10 @@ export default function AdminSettings() {
         primary_color: settings.primary_color,
         secondary_color: settings.secondary_color,
         accent_color: settings.accent_color,
+        show_company_name: settings.show_company_name ?? true,
+        menu_background_color: settings.menu_background_color || "30 25% 98%",
+        menu_foreground_color: settings.menu_foreground_color || "25 30% 15%",
+        menu_card_color: settings.menu_card_color || "0 0% 100%",
         title_font: settings.title_font,
         body_font: settings.body_font,
         show_sunday: settings.show_sunday,
@@ -85,13 +124,47 @@ export default function AdminSettings() {
         .from("menu-images")
         .getPublicUrl(filePath);
 
-      updateSettings({
+      const updates: Partial<Settings> = {
         [type === "logo" ? "logo_url" : "favicon_url"]: publicUrl,
-      });
+      };
+
+      let paletteGenerated = false;
+      if (type === "logo") {
+        try {
+          const palette = await extractPaletteFromImage(publicUrl);
+          Object.assign(updates, {
+            primary_color: palette.primary,
+            secondary_color: palette.secondary,
+            accent_color: palette.accent,
+            menu_background_color: palette.background,
+            menu_foreground_color: palette.foreground,
+            menu_card_color: palette.card,
+          });
+          setFormData((prev) => ({
+            ...prev,
+            primary_color: palette.primary,
+            secondary_color: palette.secondary,
+            accent_color: palette.accent,
+            menu_background_color: palette.background,
+            menu_foreground_color: palette.foreground,
+            menu_card_color: palette.card,
+          }));
+          paletteGenerated = true;
+        } catch {
+          // Extração de paleta é best-effort; mantém as cores atuais se falhar.
+        }
+      }
+
+      updateSettings(updates);
 
       toast({
         title: "Imagem enviada",
-        description: `${type === "logo" ? "Logo" : "Favicon"} atualizado com sucesso.`,
+        description:
+          type === "logo"
+            ? paletteGenerated
+              ? "Logo atualizada e paleta de cores gerada automaticamente a partir dela."
+              : "Logo atualizada com sucesso."
+            : "Favicon atualizado com sucesso.",
       });
     } catch (error: any) {
       toast({
@@ -101,6 +174,35 @@ export default function AdminSettings() {
       });
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleExtractPalette = async () => {
+    if (!settings?.logo_url) return;
+    setExtracting(true);
+    try {
+      const palette = await extractPaletteFromImage(settings.logo_url);
+      setFormData((prev) => ({
+        ...prev,
+        primary_color: palette.primary,
+        secondary_color: palette.secondary,
+        accent_color: palette.accent,
+        menu_background_color: palette.background,
+        menu_foreground_color: palette.foreground,
+        menu_card_color: palette.card,
+      }));
+      toast({
+        title: "Paleta extraída da logo",
+        description: "Revise as cores geradas e clique em Salvar Configurações para aplicar.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Não foi possível extrair a paleta",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setExtracting(false);
     }
   };
 
@@ -236,6 +338,22 @@ export default function AdminSettings() {
                   Defina o tamanho da logo em pixels (50-500px)
                 </p>
               </div>
+
+              <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="show_company_name">Mostrar nome da empresa no cardápio</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Desative se o nome já aparece na sua logo, para não duplicar a informação.
+                  </p>
+                </div>
+                <Switch
+                  id="show_company_name"
+                  checked={formData.show_company_name}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, show_company_name: checked })
+                  }
+                />
+              </div>
             </CardContent>
           </Card>
 
@@ -244,127 +362,120 @@ export default function AdminSettings() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Palette className="h-5 w-5" />
-                Cores do Sistema
+                Cores do Cardápio
               </CardTitle>
               <CardDescription>
-                Personalize as cores do tema com seletores visuais
+                Personalize todas as cores do painel e do cardápio, ou gere uma paleta automaticamente a partir da sua logo.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="primary_color">Cor Primária</Label>
-                  <div className="flex gap-2 items-center">
-                    <input
-                      type="color"
-                      value={`#${formData.primary_color.split(' ').map((v, i) => {
-                        const num = parseFloat(v.replace('%', ''));
-                        if (i === 0) return Math.round(num * 255 / 360).toString(16).padStart(2, '0');
-                        if (i === 1) return Math.round(num * 255 / 100).toString(16).padStart(2, '0');
-                        return Math.round(num * 255 / 100).toString(16).padStart(2, '0');
-                      }).join('')}`}
-                      onChange={(e) => {
-                        const hex = e.target.value.replace('#', '');
-                        const r = parseInt(hex.substr(0, 2), 16);
-                        const g = parseInt(hex.substr(2, 2), 16);
-                        const b = parseInt(hex.substr(4, 2), 16);
-                        const h = Math.round(Math.atan2(Math.sqrt(3) * (g - b), 2 * r - g - b) * 180 / Math.PI);
-                        const s = Math.round(Math.sqrt(3) * Math.abs(g - b) / (r + g + b) * 100);
-                        const l = Math.round((r + g + b) / 7.65);
-                        setFormData({ ...formData, primary_color: `${h} ${s}% ${l}%` });
-                      }}
-                      className="w-16 h-10 rounded border cursor-pointer"
-                    />
-                    <Input
-                      id="primary_color"
-                      value={formData.primary_color}
-                      onChange={(e) =>
-                        setFormData({ ...formData, primary_color: e.target.value })
-                      }
-                      placeholder="20 85% 55%"
-                      className="flex-1"
-                    />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleExtractPalette}
+                disabled={!settings?.logo_url || extracting}
+                className="gap-2"
+              >
+                {extracting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Wand2 className="h-4 w-4" />
+                )}
+                Extrair paleta da logo
+              </Button>
+              {!settings?.logo_url && (
+                <p className="text-xs text-muted-foreground">
+                  Envie uma logo acima para poder gerar a paleta automaticamente.
+                </p>
+              )}
+
+              <div>
+                <h4 className="mb-3 text-sm font-semibold text-foreground">Cores da marca</h4>
+                <div className="grid md:grid-cols-3 gap-6">
+                  <ColorField
+                    id="primary_color"
+                    label="Cor Primária"
+                    value={formData.primary_color}
+                    onChange={(v) => setFormData({ ...formData, primary_color: v })}
+                  />
+                  <ColorField
+                    id="secondary_color"
+                    label="Cor Secundária"
+                    value={formData.secondary_color}
+                    onChange={(v) => setFormData({ ...formData, secondary_color: v })}
+                  />
+                  <ColorField
+                    id="accent_color"
+                    label="Cor de Destaque"
+                    value={formData.accent_color}
+                    onChange={(v) => setFormData({ ...formData, accent_color: v })}
+                  />
+                </div>
+              </div>
+
+              <Separator />
+
+              <div>
+                <h4 className="mb-3 text-sm font-semibold text-foreground">Cores da página do cardápio</h4>
+                <div className="grid md:grid-cols-3 gap-6">
+                  <ColorField
+                    id="menu_background_color"
+                    label="Fundo"
+                    value={formData.menu_background_color}
+                    onChange={(v) => setFormData({ ...formData, menu_background_color: v })}
+                  />
+                  <ColorField
+                    id="menu_foreground_color"
+                    label="Texto"
+                    value={formData.menu_foreground_color}
+                    onChange={(v) => setFormData({ ...formData, menu_foreground_color: v })}
+                  />
+                  <ColorField
+                    id="menu_card_color"
+                    label="Cartões"
+                    value={formData.menu_card_color}
+                    onChange={(v) => setFormData({ ...formData, menu_card_color: v })}
+                  />
+                </div>
+              </div>
+
+              <Separator />
+
+              <div>
+                <h4 className="mb-3 text-sm font-semibold text-foreground">Pré-visualização</h4>
+                <div
+                  className="rounded-xl border p-4 transition-colors"
+                  style={{
+                    backgroundColor: `hsl(${formData.menu_background_color})`,
+                    color: `hsl(${formData.menu_foreground_color})`,
+                  }}
+                >
+                  <div
+                    className="flex items-center gap-3 rounded-lg p-3 shadow-sm"
+                    style={{ backgroundColor: `hsl(${formData.menu_card_color})` }}
+                  >
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border">
+                      {settings?.logo_url ? (
+                        <img src={settings.logo_url} alt="Prévia da logo" className="h-full w-full object-contain p-0.5" />
+                      ) : (
+                        <Image className="h-5 w-5 opacity-50" aria-hidden />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      {formData.show_company_name && (
+                        <p className="truncate font-semibold">{formData.company_name || "Sua Marmitaria"}</p>
+                      )}
+                      <p className="text-xs opacity-70">Cardápio de hoje</p>
+                    </div>
                   </div>
-                  <div 
-                    className="w-full h-12 rounded-lg border shadow-sm"
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    className="mt-3 w-full cursor-default rounded-full px-4 py-2 text-center text-sm font-semibold text-white shadow-sm"
                     style={{ backgroundColor: `hsl(${formData.primary_color})` }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="secondary_color">Cor Secundária</Label>
-                  <div className="flex gap-2 items-center">
-                    <input
-                      type="color"
-                      value={`#${formData.secondary_color.split(' ').map((v, i) => {
-                        const num = parseFloat(v.replace('%', ''));
-                        if (i === 0) return Math.round(num * 255 / 360).toString(16).padStart(2, '0');
-                        if (i === 1) return Math.round(num * 255 / 100).toString(16).padStart(2, '0');
-                        return Math.round(num * 255 / 100).toString(16).padStart(2, '0');
-                      }).join('')}`}
-                      onChange={(e) => {
-                        const hex = e.target.value.replace('#', '');
-                        const r = parseInt(hex.substr(0, 2), 16);
-                        const g = parseInt(hex.substr(2, 2), 16);
-                        const b = parseInt(hex.substr(4, 2), 16);
-                        const h = Math.round(Math.atan2(Math.sqrt(3) * (g - b), 2 * r - g - b) * 180 / Math.PI);
-                        const s = Math.round(Math.sqrt(3) * Math.abs(g - b) / (r + g + b) * 100);
-                        const l = Math.round((r + g + b) / 7.65);
-                        setFormData({ ...formData, secondary_color: `${h} ${s}% ${l}%` });
-                      }}
-                      className="w-16 h-10 rounded border cursor-pointer"
-                    />
-                    <Input
-                      id="secondary_color"
-                      value={formData.secondary_color}
-                      onChange={(e) =>
-                        setFormData({ ...formData, secondary_color: e.target.value })
-                      }
-                      placeholder="140 45% 50%"
-                      className="flex-1"
-                    />
-                  </div>
-                  <div 
-                    className="w-full h-12 rounded-lg border shadow-sm"
-                    style={{ backgroundColor: `hsl(${formData.secondary_color})` }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="accent_color">Cor de Destaque</Label>
-                  <div className="flex gap-2 items-center">
-                    <input
-                      type="color"
-                      value={`#${formData.accent_color.split(' ').map((v, i) => {
-                        const num = parseFloat(v.replace('%', ''));
-                        if (i === 0) return Math.round(num * 255 / 360).toString(16).padStart(2, '0');
-                        if (i === 1) return Math.round(num * 255 / 100).toString(16).padStart(2, '0');
-                        return Math.round(num * 255 / 100).toString(16).padStart(2, '0');
-                      }).join('')}`}
-                      onChange={(e) => {
-                        const hex = e.target.value.replace('#', '');
-                        const r = parseInt(hex.substr(0, 2), 16);
-                        const g = parseInt(hex.substr(2, 2), 16);
-                        const b = parseInt(hex.substr(4, 2), 16);
-                        const h = Math.round(Math.atan2(Math.sqrt(3) * (g - b), 2 * r - g - b) * 180 / Math.PI);
-                        const s = Math.round(Math.sqrt(3) * Math.abs(g - b) / (r + g + b) * 100);
-                        const l = Math.round((r + g + b) / 7.65);
-                        setFormData({ ...formData, accent_color: `${h} ${s}% ${l}%` });
-                      }}
-                      className="w-16 h-10 rounded border cursor-pointer"
-                    />
-                    <Input
-                      id="accent_color"
-                      value={formData.accent_color}
-                      onChange={(e) =>
-                        setFormData({ ...formData, accent_color: e.target.value })
-                      }
-                      placeholder="15 90% 60%"
-                      className="flex-1"
-                    />
-                  </div>
-                  <div 
-                    className="w-full h-12 rounded-lg border shadow-sm"
-                    style={{ backgroundColor: `hsl(${formData.accent_color})` }}
-                  />
+                  >
+                    Adicionar marmita
+                  </button>
                 </div>
               </div>
             </CardContent>

@@ -19,9 +19,14 @@ export function ExtrasSection({ section, quantities, onChange }: Props) {
           const qty = quantities[i.id] ?? 0;
           return (
             <li key={i.id} className="flex items-center justify-between gap-3 p-3">
-              <div className="flex min-w-0 flex-col">
-                <span className="font-medium text-foreground">{i.name}</span>
-                <span className="text-sm text-primary">{formatBRL(i.price)}</span>
+              <div className="flex min-w-0 items-center gap-3">
+                {i.image_url && (
+                  <img src={i.image_url} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" />
+                )}
+                <div className="flex min-w-0 flex-col">
+                  <span className="font-medium text-foreground">{i.name}</span>
+                  <span className="text-sm text-primary">{formatBRL(i.price)}</span>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 {qty > 0 && (

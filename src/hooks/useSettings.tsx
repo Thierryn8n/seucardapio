@@ -11,6 +11,10 @@ export interface Settings {
   primary_color: string;
   secondary_color: string;
   accent_color: string;
+  show_company_name: boolean;
+  menu_background_color: string;
+  menu_foreground_color: string;
+  menu_card_color: string;
   title_font: string;
   body_font: string;
   show_sunday: boolean;
