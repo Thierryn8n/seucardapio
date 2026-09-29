@@ -208,7 +208,10 @@ const HEADING_RE = /^(prote[ií]nas?|misturas?|carnes?|guarni[cç](?:[oõ]es|ao|
 const PRICE_RE = /(?:R\$\s*|\$\s*)?(\d{1,4}(?:[.,]\d{2}))\s*(?:R\$|reais)?/i;
 
 function cleanLine(line: string) {
-  return line.replace(/^[^\p{L}\p{N}(]+/u, "").replace(/[:\s]+$/, "").trim();
+  return line
+    .replace(/^[^\p{L}\p{N}(]+/u, "")
+    .replace(/[*_~`:\s]+$/u, "")
+    .trim();
 }
 
 function kindFromHeading(h: string): SectionKind | "sizes" {
@@ -230,7 +233,7 @@ export function parseMenuText(text: string): ParsedMenu {
 
   for (const raw of text.split(/\r?\n/)) {
     if (!raw.trim()) continue;
-    const pinned = /^\s*📌/u.test(raw);
+    const pinned = /^[\s*_~`]*📌/u.test(raw);
     const line = cleanLine(raw);
     if (!line) continue;
     const priceMatch = line.match(PRICE_RE);
