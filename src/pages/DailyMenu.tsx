@@ -111,13 +111,17 @@ export default function DailyMenu() {
     <div className="min-h-screen bg-background font-poppins text-foreground" style={themeVars}>
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-2xl items-center gap-4 px-4 py-5">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-border bg-background">
-            {restaurant.logo_url ? (
-              <img src={restaurant.logo_url} alt={`Logo ${restaurant.name}`} className="h-full w-full object-contain p-1" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-primary text-primary-foreground"><UtensilsCrossed className="h-6 w-6" aria-hidden /></div>
-            )}
-          </div>
+          {restaurant.logo_url ? (
+            <img
+              src={restaurant.logo_url}
+              alt={`Logo ${restaurant.name}`}
+              className="h-[168px] w-[168px] shrink-0 object-contain"
+            />
+          ) : (
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+              <UtensilsCrossed className="h-6 w-6" aria-hidden />
+            </div>
+          )}
           <div className="flex min-w-0 flex-col">
             {restaurant.show_company_name && (
               <h1 className="font-playfair text-2xl font-bold leading-tight text-balance">{restaurant.name}</h1>
