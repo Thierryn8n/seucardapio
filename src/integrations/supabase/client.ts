@@ -2,15 +2,12 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-export const SUPABASE_URL =
-  import.meta.env.VITE_TARGET_SUPABASE_URL ||
-  import.meta.env.NEXT_PUBLIC_SUPABASE_URL ||
-  import.meta.env.VITE_SUPABASE_URL;
-export const SUPABASE_PUBLISHABLE_KEY =
-  import.meta.env.VITE_TARGET_SUPABASE_ANON_KEY ||
-  import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+export const SUPABASE_URL: string = import.meta.env.VITE_TARGET_SUPABASE_URL;
+export const SUPABASE_PUBLISHABLE_KEY: string = import.meta.env.VITE_TARGET_SUPABASE_ANON_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  throw new Error("NEW_SUPABASE_URL e NEW_SUPABASE_ANON_KEY precisam estar configuradas.");
+}
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";

@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
     "import.meta.env.VITE_TARGET_SUPABASE_URL": JSON.stringify(env.NEW_SUPABASE_URL ?? ""),
     "import.meta.env.VITE_TARGET_SUPABASE_ANON_KEY": JSON.stringify(env.NEW_SUPABASE_ANON_KEY ?? ""),
   },
-  envPrefix: ["VITE_", "NEXT_PUBLIC_"],
+  envPrefix: ["VITE_"],
   server: {
     host: "::",
     port: 8080,
