@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Camera, ClipboardPaste, Copy, ImagePlus, Loader2, MoreVertical, Plus, Sparkles, Trash2, Upload, X } from "lucide-react";
+import { Camera, ClipboardPaste, Copy, GripVertical, History, ImagePlus, Loader2, MoreVertical, Plus, Sparkles, Trash2, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,9 +18,11 @@ import { db } from "@/lib/db";
 import { uploadImage } from "@/lib/upload";
 import { parseMenuPhoto, generateFoodImage, readFileAsDataUrl } from "@/lib/menu-images";
 import {
-  fetchMenuByDate, fetchSizes, formatBRL, isPaidKind, kindLabel, MENU_SELECT, normalizeMenu, parseMenuText, SECTION_KINDS, todayISO,
-  type DailyMenu, type MenuItem, type MenuSection, type ParsedMenu, type SectionKind,
+  fetchMenuByDate, fetchRecentItems, fetchSizes, formatBRL, isPaidKind, kindLabel, MENU_SELECT, normalizeMenu, parseMenuText, SECTION_KINDS, todayISO,
+  type DailyMenu, type MenuItem, type MenuSection, type ParsedMenu, type RecentItem, type SectionKind,
 } from "@/lib/daily-menu";
+
+const DRAG_MIME = "application/x-menu-item";
 
 const EXAMPLE = `📌PROTEINAS
 Frango no Forno
@@ -164,22 +166,38 @@ function ItemRow({ item, paid, kind, onUpdate, onRemove }: {
   );
 }
 
-function SectionCard({ section, onAddItem, onUpdateItem, onRemoveItem, onRemove }: {
+function SectionCard({ section, draggingKind, onAddItem, onDropItem, onUpdateItem, onRemoveItem, onRemove }: {
   section: MenuSection;
+  draggingKind: SectionKind | null;
   onAddItem: (name: string, price: number) => Promise<boolean>;
+  onDropItem: (item: RecentItem) => void;
   onUpdateItem: (i: MenuItem, p: Partial<MenuItem>) => void;
   onRemoveItem: (i: MenuItem) => void;
   onRemove: () => void;
 }) {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
+  const [dragOver, setDragOver] = useState(false);
   const paid = isPaidKind(section.kind);
+  const canDrop = draggingKind === section.kind;
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
     if (await onAddItem(name.trim(), paid ? Number(price.replace(",", ".")) || 0 : 0)) { setName(""); setPrice(""); }
   };
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4">
+    <div
+      onDragOver={(e) => { if (!canDrop) return; e.preventDefault(); setDragOver(true); }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => {
+        setDragOver(false);
+        if (!canDrop) return;
+        e.preventDefault();
+        const raw = e.dataTransfer.getData(DRAG_MIME);
+        if (!raw) return;
+        try { onDropItem(JSON.parse(raw) as RecentItem); } catch { /* ignore malformed drag payload */ }
+      }}
+      className={`flex flex-col gap-2 rounded-xl border p-4 transition-colors ${dragOver ? "border-primary bg-primary/5" : canDrop ? "border-primary/40 bg-card" : "border-border bg-card"}`}
+    >
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-col">
           <h3 className="font-playfair text-lg font-bold">{section.name}</h3>
@@ -197,6 +215,57 @@ function SectionCard({ section, onAddItem, onUpdateItem, onRemoveItem, onRemove 
         {paid && <Input required className="w-24" inputMode="decimal" placeholder="5,00" value={price} onChange={(e) => setPrice(e.target.value)} aria-label="Preço" />}
         <Button type="submit" size="icon" aria-label="Adicionar item"><Plus className="h-4 w-4" /></Button>
       </form>
+    </div>
+  );
+}
+
+function ItemLibrary({ items, onDragKindChange }: {
+  items: RecentItem[];
+  onDragKindChange: (k: SectionKind | null) => void;
+}) {
+  const [open, setOpen] = useState(true);
+  if (!items.length) return null;
+  const groups = SECTION_KINDS
+    .map((k) => ({ kind: k.value, label: k.label, list: items.filter((i) => i.kind === k.value) }))
+    .filter((g) => g.list.length > 0);
+
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border p-4">
+      <button type="button" onClick={() => setOpen((v) => !v)} className="flex items-center justify-between gap-3 text-left">
+        <span className="flex items-center gap-2 font-playfair text-lg font-bold"><History className="h-4 w-4" aria-hidden />Itens de cardápios anteriores</span>
+        <span className="text-xs text-muted-foreground">{open ? "Ocultar" : "Mostrar"}</span>
+      </button>
+      {open && (
+        <>
+          <p className="text-xs text-muted-foreground">Arraste um item até uma seção do cardápio de hoje para adicioná-lo.</p>
+          <div className="flex flex-col gap-3">
+            {groups.map((g) => (
+              <div key={g.kind} className="flex flex-col gap-1.5">
+                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{g.label}</span>
+                <div className="flex flex-wrap gap-2">
+                  {g.list.map((i) => (
+                    <div
+                      key={`${g.kind}-${i.name}`}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData(DRAG_MIME, JSON.stringify(i));
+                        e.dataTransfer.effectAllowed = "copy";
+                        onDragKindChange(i.kind);
+                      }}
+                      onDragEnd={() => onDragKindChange(null)}
+                      className="flex cursor-grab items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-sm active:cursor-grabbing"
+                    >
+                      <GripVertical className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                      {i.name}
+                      {isPaidKind(i.kind) && i.price > 0 && <span className="text-xs text-muted-foreground">{formatBRL(i.price)}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -318,9 +387,11 @@ export function MenuEditor({ userId }: { userId: string }) {
   const [newSec, setNewSec] = useState<{ name: string; kind: SectionKind }>({ name: "", kind: "protein" });
   const [pendingRemoveSection, setPendingRemoveSection] = useState<MenuSection | null>(null);
   const [removingSection, setRemovingSection] = useState(false);
+  const [draggingKind, setDraggingKind] = useState<SectionKind | null>(null);
 
   const menuKey = ["daily-menu", userId, date];
   const { data: menu, isLoading } = useQuery({ queryKey: menuKey, queryFn: () => fetchMenuByDate(userId, date) });
+  const { data: recentItems } = useQuery({ queryKey: ["recent-items", userId, date], queryFn: () => fetchRecentItems(userId, date) });
   const refresh = () => qc.invalidateQueries({ queryKey: menuKey });
   const fail = (e: DbError) => { if (e) toast({ title: "Erro", description: e.message, variant: "destructive" }); return !!e; };
 
@@ -421,6 +492,15 @@ export function MenuEditor({ userId }: { userId: string }) {
     refresh();
     return true;
   };
+  const dropItem = async (s: MenuSection, item: RecentItem) => {
+    if (s.items.some((i) => i.name.toLowerCase() === item.name.toLowerCase())) {
+      toast({ title: `"${item.name}" já está em ${s.name}` });
+      return;
+    }
+    if (await addItem(s, item.name, isPaidKind(s.kind) ? item.price : 0)) {
+      toast({ title: `"${item.name}" adicionado em ${s.name}` });
+    }
+  };
   const togglePublish = async (v: boolean) => { if (menu && !fail((await db.from("daily_menus").update({ is_published: v }).eq("id", menu.id)).error)) refresh(); };
   const saveNotes = async (notes: string) => { if (menu && notes !== (menu.notes ?? "")) { if (!fail((await db.from("daily_menus").update({ notes: notes || null }).eq("id", menu.id)).error)) refresh(); } };
 
@@ -448,6 +528,8 @@ export function MenuEditor({ userId }: { userId: string }) {
         </div>
       )}
 
+      {!!recentItems?.length && <ItemLibrary items={recentItems} onDragKindChange={setDraggingKind} />}
+
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Carregando...</p>
       ) : !menu?.sections.length ? (
@@ -457,7 +539,16 @@ export function MenuEditor({ userId }: { userId: string }) {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {menu.sections.map((s) => (
-            <SectionCard key={s.id} section={s} onAddItem={(n, p) => addItem(s, n, p)} onUpdateItem={updateItem} onRemoveItem={removeItem} onRemove={() => setPendingRemoveSection(s)} />
+            <SectionCard
+              key={s.id}
+              section={s}
+              draggingKind={draggingKind}
+              onAddItem={(n, p) => addItem(s, n, p)}
+              onDropItem={(item) => dropItem(s, item)}
+              onUpdateItem={updateItem}
+              onRemoveItem={removeItem}
+              onRemove={() => setPendingRemoveSection(s)}
+            />
           ))}
         </div>
       )}

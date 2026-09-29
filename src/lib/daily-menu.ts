@@ -109,6 +109,26 @@ export async function fetchMenuByDate(userId: string, date: string) {
   return normalizeMenu(data as RawMenu | null);
 }
 
+export interface RecentItem { name: string; price: number; kind: SectionKind }
+
+export async function fetchRecentItems(userId: string, excludeDate: string): Promise<RecentItem[]> {
+  const { data, error } = await db
+    .from("menu_section_items")
+    .select("name, price, menu_sections(kind, daily_menus(menu_date))")
+    .eq("user_id", userId)
+    .limit(1000);
+  if (error) throw error;
+  const seen = new Map<string, RecentItem>();
+  for (const row of (data ?? []) as unknown as { name: string; price: number; menu_sections: { kind: SectionKind; daily_menus: { menu_date: string } | null } | null }[]) {
+    const kind = row.menu_sections?.kind;
+    const menuDate = row.menu_sections?.daily_menus?.menu_date;
+    if (!kind || menuDate === excludeDate) continue;
+    const key = `${kind}:${row.name.toLowerCase()}`;
+    if (!seen.has(key)) seen.set(key, { name: row.name, price: Number(row.price), kind });
+  }
+  return Array.from(seen.values());
+}
+
 export async function fetchSizes(userId: string) {
   const { data, error } = await db.from("marmita_sizes").select("*").eq("user_id", userId).order("display_order");
   if (error) throw error;
