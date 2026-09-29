@@ -127,6 +127,18 @@ const AdminDashboardSelector = () => {
               </Card>
             </Link>
 
+            <Link to={isAdmin ? "/admin/cardapio-do-dia" : "#"} className={!isAdmin ? "pointer-events-none opacity-50" : ""}>
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full border-primary">
+                <CardHeader>
+                  <Truck className="w-8 h-8 mb-2 text-primary" />
+                  <CardTitle>Cardápio do Dia e Pedidos</CardTitle>
+                  <CardDescription>
+                    Publique o cardápio de hoje e receba os pedidos das marmitas
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+
             <Link to={isAdmin ? "/admin/menus" : "#"} className={!isAdmin ? "pointer-events-none opacity-50" : ""}>
               <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
                 <CardHeader>

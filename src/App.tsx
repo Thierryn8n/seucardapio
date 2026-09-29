@@ -8,6 +8,8 @@ import { Level3Route } from "./components/Level3Route";
 import { AdminRoute, SimpleOnlyRoute } from "./components/routes";
 import Landing from "./pages/Landing";
 import Menu from "./pages/Menu";
+import DailyMenu from "./pages/DailyMenu";
+import AdminDailyMenu from "./pages/admin/AdminDailyMenu";
 import Auth from "./pages/Auth";
 import CustomerDelivery from "./pages/CustomerDelivery";
 import CustomerOrderTracking from "./pages/CustomerOrderTracking";
@@ -43,8 +45,14 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/" element={<Landing />} />
-            <Route path="/:id/cardapio" element={<Menu />} />
+            <Route path="/:id/cardapio" element={<DailyMenu />} />
+            <Route path="/:id/semanal" element={<Menu />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/admin/cardapio-do-dia" element={
+              <AdminRoute>
+                <AdminDailyMenu />
+              </AdminRoute>
+            } />
             
             {/* Rotas do Admin Simples - Protegidas por AdminRoute */}
             <Route path="/admin" element={
