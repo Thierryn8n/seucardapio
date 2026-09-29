@@ -1,4 +1,3 @@
-import { generateImage } from "ai";
 import { adminClient, requireUser } from "./_lib/auth";
 
 export const config = { runtime: "nodejs" };
@@ -11,6 +10,8 @@ const KIND_HINT: Record<string, string> = {
   extra: "item de comida",
 };
 
+const NVIDIA_FLUX_URL = "https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux.1-schnell";
+
 function slugify(value: string) {
   return value
     .normalize("NFD")
@@ -19,6 +20,47 @@ function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 40);
+}
+
+async function generateWithNvidia(prompt: string): Promise<Buffer> {
+  const apiKey = process.env.NVIDIA_API_KEY;
+  if (!apiKey) {
+    throw new Error("NVIDIA_API_KEY não configurada.");
+  }
+
+  const response = await fetch(NVIDIA_FLUX_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      prompt,
+      mode: "base",
+      width: 1024,
+      height: 1024,
+      cfg_scale: 0,
+      samples: 1,
+      seed: 0,
+      steps: 4,
+    }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(`NVIDIA API error ${response.status}: ${text.slice(0, 300)}`);
+  }
+
+  const data: any = await response.json();
+  const base64: string | undefined =
+    data?.artifacts?.[0]?.base64 ?? data?.data?.[0]?.b64_json ?? data?.image;
+
+  if (!base64) {
+    throw new Error("Resposta da NVIDIA sem imagem.");
+  }
+
+  return Buffer.from(base64, "base64");
 }
 
 export default async function handler(req: any, res: any) {
@@ -43,13 +85,8 @@ export default async function handler(req: any, res: any) {
 
   try {
     const hint = KIND_HINT[kind as string] ?? "item de comida";
-    const { image } = await generateImage({
-      model: "google/gemini-2.5-flash-image",
-      prompt: `Fotografia profissional de comida, apetitosa, bem iluminada, fundo neutro desfocado, vista de perto, estilo cardápio de restaurante: ${hint} chamado "${name}". Sem texto, sem logotipos, sem talheres desnecessários.`,
-      aspectRatio: "1:1",
-    });
-
-    const bytes = image.uint8Array;
+    const prompt = `Fotografia profissional de comida, apetitosa, bem iluminada, fundo neutro desfocado, vista de perto, estilo cardápio de restaurante: ${hint} chamado "${name}". Sem texto, sem logotipos, sem talheres desnecessários.`;
+    const bytes = await generateWithNvidia(prompt);
     const path = `${userId}/ai/${slugify(name)}-${Date.now()}.png`;
     const { error: uploadError } = await adminClient.storage
       .from("menu-images")
