@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AdminShell, useStorePath } from "@/components/admin-shell/AdminShell";
+import { PlatformOverview } from "@/components/admin-shell/PlatformOverview";
 import { cn } from "@/lib/utils";
 
 type Tile = { to: string; title: string; description: string; icon: LucideIcon; locked?: boolean };
@@ -67,6 +68,14 @@ const AdminDashboardSelector = () => {
     );
   }
   if (!user) return null;
+
+  if (isAdmin) {
+    return (
+      <AdminShell title="Visão geral" subtitle="Tudo o que acontece na plataforma hoje">
+        <PlatformOverview />
+      </AdminShell>
+    );
+  }
 
   const locked = !isAdmin;
   const showDelivery = isAdmin || userPlan === "premium";

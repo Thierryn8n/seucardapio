@@ -29,18 +29,30 @@ export function useStorePath() {
 function useSections(): NavSection[] {
   const { isAdmin, userPlan } = useAuth();
   const locked = !isAdmin;
-  const sections: NavSection[] = [
+  const sections: NavSection[] = [];
+  if (isAdmin) {
+    sections.push({
+      title: "Plataforma",
+      items: [
+        { to: "/admin", label: "Visão geral", icon: LayoutGrid },
+        { to: "/admin/users", label: "Usuários", icon: Users },
+        { to: "/admin/plans", label: "Planos", icon: Crown },
+        { to: "/admin/gallery", label: "Galeria", icon: Image },
+      ],
+    });
+  }
+  sections.push(
     {
       title: "Marmitaria",
       items: [
-        { to: "/admin", label: "Início", icon: LayoutGrid },
+        ...(isAdmin ? [] : [{ to: "/admin", label: "Início", icon: LayoutGrid }]),
         { to: "/admin/cardapio-do-dia", label: "Cardápio do dia", icon: UtensilsCrossed, locked },
         { to: "/admin/menus", label: "Cardápio semanal", icon: CalendarDays, locked },
         { to: "/admin/suggestions", label: "Sugestões", icon: MessageSquare, locked },
         { to: "/admin/settings", label: "Configurações", icon: Settings, locked },
       ],
     },
-  ];
+  );
   if (isAdmin || userPlan === "premium") {
     sections.push({
       title: "Delivery",
@@ -49,17 +61,6 @@ function useSections(): NavSection[] {
         { to: "/admin/products", label: "Produtos", icon: Package },
         { to: "/admin/coupons", label: "Cupons", icon: Ticket },
         { to: "/admin/mercadopago", label: "Mercado Pago", icon: CreditCard },
-      ],
-    });
-  }
-  if (isAdmin) {
-    sections.push({
-      title: "Plataforma",
-      items: [
-        { to: "/admin/dashboard", label: "Dashboard", icon: BarChart3 },
-        { to: "/admin/users", label: "Usuários", icon: Users },
-        { to: "/admin/plans", label: "Planos", icon: Crown },
-        { to: "/admin/gallery", label: "Galeria", icon: Image },
       ],
     });
   }
@@ -198,6 +199,14 @@ export function AdminShell({
 
       <MobileTabBar />
     </div>
+  );
+}
+
+export function LegacyAdminPage({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
+  return (
+    <AdminShell title={title} subtitle={subtitle}>
+      <div className="legacy-admin mx-auto max-w-7xl">{children}</div>
+    </AdminShell>
   );
 }
 

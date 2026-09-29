@@ -160,6 +160,34 @@ All colors MUST be HSL.
   border-color: hsl(var(--foreground) / 0.09);
   box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.06), 0 8px 24px -16px hsl(0 0% 0% / 0.3);
 }
+/* Normaliza páginas antigas do painel para o tema (claro/escuro) dentro do AdminShell */
+.legacy-admin .min-h-screen { min-height: 0 !important; }
+.legacy-admin .bg-gray-50, .legacy-admin .bg-background { background: transparent !important; }
+.legacy-admin .min-h-screen > .max-w-7xl, .legacy-admin .min-h-screen > .container,
+.legacy-admin .min-h-screen > .max-w-4xl { padding-top: 0 !important; padding-left: 0 !important; padding-right: 0 !important; max-width: none; }
+.legacy-admin .min-h-screen.py-8, .legacy-admin .min-h-screen .py-8:first-child { padding-top: 0 !important; }
+.legacy-admin h1 { display: none; }
+.legacy-admin h1 + p { display: none; }
+.legacy-admin .text-gray-900, .legacy-admin .text-gray-800, .legacy-admin .text-gray-700 { color: hsl(var(--foreground)) !important; }
+.legacy-admin .text-gray-600, .legacy-admin .text-gray-500, .legacy-admin .text-gray-400 { color: hsl(var(--muted-foreground)) !important; }
+.legacy-admin .bg-white, .legacy-admin .bg-gray-100 { background: hsl(var(--muted) / 0.6) !important; }
+.legacy-admin .border-gray-200, .legacy-admin .border-gray-300 { border-color: hsl(var(--border)) !important; }
+.legacy-admin .bg-orange-500, .legacy-admin .bg-orange-600 { background: hsl(var(--primary)) !important; color: hsl(var(--primary-foreground)) !important; }
+.legacy-admin .hover\:bg-orange-600:hover { filter: brightness(1.06); }
+.legacy-admin .text-orange-600, .legacy-admin .text-orange-500 { color: hsl(var(--primary)) !important; }
+.legacy-admin .bg-orange-50, .legacy-admin .bg-orange-100 { background: hsl(var(--primary) / 0.12) !important; }
+.legacy-admin .ring-purple-500 { --tw-ring-color: hsl(var(--primary)) !important; }
+.legacy-admin .rounded-lg.border, .legacy-admin .rounded-xl.border { border-radius: 1.25rem; }
+.dark .legacy-admin .bg-green-100 { background: hsl(140 45% 50% / 0.15) !important; }
+.dark .legacy-admin .text-green-800, .dark .legacy-admin .text-green-700 { color: hsl(140 50% 70%) !important; }
+.dark .legacy-admin .bg-red-100, .dark .legacy-admin .bg-red-50 { background: hsl(0 80% 60% / 0.15) !important; }
+.dark .legacy-admin .text-red-800, .dark .legacy-admin .text-red-700 { color: hsl(0 80% 75%) !important; }
+.dark .legacy-admin .bg-yellow-100 { background: hsl(45 90% 55% / 0.15) !important; }
+.dark .legacy-admin .text-yellow-800, .dark .legacy-admin .text-yellow-700 { color: hsl(45 90% 70%) !important; }
+.dark .legacy-admin .bg-blue-100, .dark .legacy-admin .bg-blue-50 { background: hsl(210 80% 60% / 0.15) !important; }
+.dark .legacy-admin .text-blue-800, .dark .legacy-admin .text-blue-600 { color: hsl(210 80% 75%) !important; }
+.dark .legacy-admin .border-blue-200 { border-color: hsl(210 80% 60% / 0.3) !important; }
+
 .admin-shell input:not([type="checkbox"]):not([type="radio"]),
 .admin-shell textarea,
 .admin-shell [role="combobox"] {

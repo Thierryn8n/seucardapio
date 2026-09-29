@@ -8,6 +8,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { Level3Route } from "./components/Level3Route";
 import { AdminRoute, SimpleOnlyRoute } from "./components/routes";
 import HomeRoute from "./components/HomeRoute";
+import { LegacyAdminPage } from "./components/admin-shell/AdminShell";
 import Menu from "./pages/Menu";
 import DailyMenu from "./pages/DailyMenu";
 import AdminDailyMenu from "./pages/admin/AdminDailyMenu";
@@ -76,80 +77,80 @@ const App = () => (
             } />
             <Route path="/admin/users" element={
               <AdminRoute>
-                <AdminUsers />
+                <LegacyAdminPage title="Usuários" subtitle="Contas, planos e permissões"><AdminUsers /></LegacyAdminPage>
               </AdminRoute>
             } />
             <Route path="/admin/plans" element={
               <AdminRoute>
-                <AdminPlans />
+                <LegacyAdminPage title="Planos" subtitle="Preços e recursos da plataforma"><AdminPlans /></LegacyAdminPage>
               </AdminRoute>
             } />
             <Route path="/admin/menus" element={
               <AdminRoute>
-                <AdminMenus />
+                <LegacyAdminPage title="Cardápio semanal" subtitle="Planeje as refeições da semana"><AdminMenus /></LegacyAdminPage>
               </AdminRoute>
             } />
             <Route path="/admin/menus/new" element={
               <AdminRoute>
-                <AdminMenuForm />
+                <LegacyAdminPage title="Refeição" subtitle="Criar ou editar refeição"><AdminMenuForm /></LegacyAdminPage>
               </AdminRoute>
             } />
             <Route path="/admin/menus/:id" element={
               <AdminRoute>
-                <AdminMenuForm />
+                <LegacyAdminPage title="Refeição" subtitle="Criar ou editar refeição"><AdminMenuForm /></LegacyAdminPage>
               </AdminRoute>
             } />
             
             {/* Rotas exclusivas do Admin Simples - Bloqueiam acesso do Master */}
             <Route path="/admin/settings" element={
               <SimpleOnlyRoute>
-                <AdminSettings />
+                <LegacyAdminPage title="Configurações" subtitle="Marca, cores e funcionamento"><AdminSettings /></LegacyAdminPage>
               </SimpleOnlyRoute>
             } />
             <Route path="/admin/orders" element={
               <SimpleOnlyRoute>
-                <AdminOrders />
+                <LegacyAdminPage title="Pedidos" subtitle="Pedidos de delivery"><AdminOrders /></LegacyAdminPage>
               </SimpleOnlyRoute>
             } />
             <Route path="/admin/coupons" element={
               <SimpleOnlyRoute>
-                <AdminCoupons />
+                <LegacyAdminPage title="Cupons" subtitle="Descontos e promoções"><AdminCoupons /></LegacyAdminPage>
               </SimpleOnlyRoute>
             } />
             {/* Mercado Pago - Admin Simples */}
              {/* Mercado Pago - Admin Simples */}
              <Route path="/admin/mercadopago" element={
                <SimpleOnlyRoute>
-                 <AdminMercadoPago />
+                 <LegacyAdminPage title="Mercado Pago" subtitle="Pagamentos online"><AdminMercadoPago /></LegacyAdminPage>
                </SimpleOnlyRoute>
              } />
             
             <Route path="/admin/gallery" element={
               <AdminRoute>
-                <AdminGallery />
+                <LegacyAdminPage title="Galeria" subtitle="Imagens da plataforma"><AdminGallery /></LegacyAdminPage>
               </AdminRoute>
             } />
             <Route path="/admin/suggestions" element={
               <AdminRoute>
-                <AdminMealSuggestions />
+                <LegacyAdminPage title="Sugestões" subtitle="O que os clientes querem comer"><AdminMealSuggestions /></LegacyAdminPage>
               </AdminRoute>
             } />
             <Route path="/admin/products" element={
               <AdminRoute>
-                <AdminProducts />
+                <LegacyAdminPage title="Produtos" subtitle="Itens, adicionais e opções"><AdminProducts /></LegacyAdminPage>
               </AdminRoute>
             } />
             <Route path="/admin/products/new" element={
               <AdminRoute>
                 <Level3Route>
-                  <AdminProductForm />
+                  <LegacyAdminPage title="Produto" subtitle="Criar ou editar produto"><AdminProductForm /></LegacyAdminPage>
                 </Level3Route>
               </AdminRoute>
             } />
             <Route path="/admin/products/:id" element={
               <AdminRoute>
                 <Level3Route>
-                  <AdminProductForm />
+                  <LegacyAdminPage title="Produto" subtitle="Criar ou editar produto"><AdminProductForm /></LegacyAdminPage>
                 </Level3Route>
               </AdminRoute>
             } />
