@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface Settings {
   id: string;
@@ -33,16 +34,20 @@ export interface Settings {
 export const useSettings = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: settings, isLoading } = useQuery({
-    queryKey: ["settings"],
+    queryKey: ["settings", user?.id],
+    enabled: !!user,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("settings")
         .select("*")
-        .single();
+        .eq("user_id", user!.id)
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) throw new Error("Configurações não encontradas para este usuário.");
        
       // Buscar plan_level do restaurante a partir do user_id (id do restaurante)
       try {
