@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdminStatus } from "@/hooks/useAdminStatus";
 import { useSettings, type Settings } from "@/hooks/useSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -44,8 +45,12 @@ function ColorField({
 
 export default function AdminSettings() {
   const navigate = useNavigate();
-  const { user, isAdmin, isAdminMaster, isAdminDelivery } = useAuth();
-  const { settings, isLoading, updateSettings } = useSettings();
+  const { user, isAdmin } = useAuth();
+  const { isMasterAdmin, isProfileAdmin, isLoading: isLoadingAdminStatus } = useAdminStatus();
+  const isAdminMaster = isMasterAdmin;
+  const isAdminDelivery = isProfileAdmin && !isMasterAdmin;
+  const { settings, isLoading: isLoadingSettings, updateSettings } = useSettings();
+  const isLoading = isLoadingSettings || isLoadingAdminStatus;
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
   const [extracting, setExtracting] = useState(false);
