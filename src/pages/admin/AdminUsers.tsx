@@ -1,424 +1,190 @@
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Loader2, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, Search, Filter, UserPlus, Mail, Calendar, Crown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { decryptUserRole } from "@/lib/role-encryption";
+import { db } from "@/lib/db";
 
-const AdminUsers = () => {
-  const navigate = useNavigate();
-  const { user, loading, isAdmin, isAdminMaster, isAdminDelivery, updateUserRole } = useAuth();
+type Marmitaria = {
+  user_id: string;
+  email: string | null;
+  name: string | null;
+  created_at: string;
+  plan: string;
+  expires_at: string | null;
+  panels_enabled: boolean;
+  is_admin: boolean;
+};
+
+const PLAN_LABELS: Record<string, string> = { free: "Gratuito", professional: "Profissional", premium: "Premium" };
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function accessState(m: Marmitaria) {
+  if (m.is_admin) return { label: "Admin", variant: "secondary" as const };
+  if (!m.panels_enabled) return { label: "Pausado", variant: "destructive" as const };
+  if (!m.expires_at) return { label: "Sem validade", variant: "outline" as const };
+  const days = Math.ceil((new Date(m.expires_at).getTime() - Date.now()) / DAY_MS);
+  if (days <= 0) return { label: "Expirado", variant: "destructive" as const };
+  if (days <= 7) return { label: `Vence em ${days}d`, variant: "outline" as const };
+  return { label: "Ativo", variant: "default" as const };
+}
+
+const toDateInput = (iso: string | null) => (iso ? iso.slice(0, 10) : "");
+const addDays = (base: string, days: number) => {
+  const start = base && new Date(base) > new Date() ? new Date(base) : new Date();
+  return new Date(start.getTime() + days * DAY_MS).toISOString().slice(0, 10);
+};
+
+function ManagePlanDialog({ item, onClose }: { item: Marmitaria; onClose: () => void }) {
   const { toast } = useToast();
-  const [users, setUsers] = useState([]);
-  const [loadingUsers, setLoadingUsers] = useState(true);
+  const queryClient = useQueryClient();
+  const [plan, setPlan] = useState(item.plan);
+  const [expires, setExpires] = useState(toDateInput(item.expires_at));
+  const [enabled, setEnabled] = useState(item.panels_enabled);
 
-  // Buscar usuários do banco de dados
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
-    try {
-      setLoadingUsers(true);
-      
-      console.log('Usuário atual:', user?.id);
-      console.log('É admin?', isAdmin);
-      
-      // Só admin master pode carregar lista de usuários
-      if (!isAdminMaster) {
-        console.warn('Usuário não é admin master, abortando carregamento');
-        return;
-      }
-
-      // Buscar dados com tratamento individual de erros
-      let profilesData = [];
-      let subscriptionsData = [];
-      let rolesData = [];
-
-      // Buscar profiles (com tratamento de erro)
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, email, is_admin, created_at, updated_at');
-        
-        if (error) {
-          console.error('Erro ao buscar profiles:', error);
-          toast({
-            title: 'Erro ao carregar perfis',
-            description: error.message,
-            variant: 'destructive'
-          });
-        } else {
-          profilesData = data || [];
-        }
-      } catch (err) {
-        console.error('Exceção ao buscar profiles:', err);
-      }
-
-      // Buscar subscriptions (com tratamento de erro)
-      try {
-        const { data, error } = await supabase
-          .from('subscriptions')
-          .select('user_id, plan, status, started_at, expires_at');
-        
-        if (error) {
-          console.error('Erro ao buscar subscriptions:', error);
-        } else {
-          subscriptionsData = data || [];
-        }
-      } catch (err) {
-        console.error('Exceção ao buscar subscriptions:', err);
-      }
-
-      // Buscar user_roles (com tratamento de erro)
-      try {
-        const { data, error } = await supabase
-          .from('user_roles')
-          .select('user_id, role');
-        
-        if (error) {
-          console.error('Erro ao buscar roles:', error);
-        } else {
-          rolesData = data || [];
-        }
-      } catch (err) {
-        console.error('Exceção ao buscar roles:', err);
-      }
-
-      console.log('Profiles data:', profilesData);
-      console.log('Subscriptions data:', subscriptionsData);
-      console.log('Roles data:', rolesData);
-
-      // Combinar dados (mesmo que parcial)
-      const baseUsers = profilesData.map(profile => {
-        const userSubscription = subscriptionsData.find(s => s.user_id === profile.id);
-        const userRole = rolesData.find(r => r.user_id === profile.id);
-        
-        return {
-          id: profile.id,
-          email: profile.email,
-          role: userRole?.role || (profile.is_admin ? 'admin' : 'user'),
-          plan: userSubscription?.plan || 'free',
-          status: userSubscription?.status || 'active',
-          created_at: profile.created_at,
-          last_login: profile.updated_at,
-        };
+  const save = useMutation({
+    mutationFn: async () => {
+      const { error } = await db.rpc("admin_set_plan", {
+        p_user_id: item.user_id,
+        p_plan: plan,
+        p_expires_at: expires ? new Date(`${expires}T23:59:59`).toISOString() : null,
+        p_panels_enabled: enabled,
       });
-
-      console.log('Usuários combinados:', baseUsers.length, 'usuários');
-      console.log('Usuários data:', baseUsers);
-      
-      setUsers(baseUsers);
-    } catch (error) {
-      console.error('Erro geral ao buscar usuários:', error);
-      toast({
-        title: 'Erro',
-        description: error.message || 'Não foi possível carregar os usuários.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoadingUsers(false);
-    }
-  };
-
-  if (loading || loadingUsers) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Carregando...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Só admin master (usuário em ambas: profiles.is_admin=true E user_roles.role='admin') pode acessar
-  if (!user || !isAdminMaster) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Acesso Negado</h1>
-          <p className="mt-2 text-gray-600">
-            {isAdminDelivery 
-              ? "❌ Admin básico não tem acesso à lista de usuários. Apenas Admin Master tem acesso completo."
-              : "Você não tem permissão para acessar esta área."
-            }
-          </p>
-          <Button 
-            onClick={() => navigate("/")}
-            className="mt-4 bg-orange-500 hover:bg-orange-600"
-          >
-            Voltar para Home
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  const getPlanBadge = (plan: string) => {
-    const colors = {
-      free: 'bg-gray-100 text-gray-800',
-      professional: 'bg-blue-100 text-blue-800',
-      premium: 'bg-orange-100 text-orange-800'
-    };
-    return <Badge className={colors[plan as keyof typeof colors] || colors.free}>{plan}</Badge>;
-  };
-
-  const getRoleBadge = (role: string) => {
-    const colors = {
-      admin: 'bg-red-100 text-red-800',
-      user: 'bg-green-100 text-green-800'
-    };
-    return <Badge className={colors[role as keyof typeof colors] || colors.user}>{role}</Badge>;
-  };
-
-  const getStatusBadge = (status: string) => {
-    const colors = {
-      active: 'bg-green-100 text-green-800',
-      inactive: 'bg-gray-100 text-gray-800',
-      suspended: 'bg-red-100 text-red-800'
-    };
-    return <Badge className={colors[status as keyof typeof colors] || colors.inactive}>{status}</Badge>;
-  };
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-marmitarias"] });
+      queryClient.invalidateQueries({ queryKey: ["plan-access"] });
+      toast({ title: "Plano atualizado", description: item.email ?? undefined });
+      onClose();
+    },
+    onError: (e: Error) => toast({ title: "Erro ao salvar", description: e.message, variant: "destructive" }),
+  });
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Gestão de Usuários</h1>
-              <p className="mt-2 text-gray-600">
-                Gerencie os usuários do sistema, planos e permissões
-              </p>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Gerenciar plano</DialogTitle>
+          <DialogDescription>{item.name || item.email}</DialogDescription>
+        </DialogHeader>
+
+        <div className="flex flex-col gap-5">
+          <div className="flex items-center justify-between gap-4 rounded-xl border p-3">
+            <div className="flex flex-col">
+              <Label htmlFor="panels-enabled">Painel liberado</Label>
+              <span className="text-xs text-muted-foreground">Desligado, a marmitaria vê a tela de renovação.</span>
             </div>
-            <div className="flex space-x-3">
-              <Button 
-                onClick={() => navigate("/admin")}
-                variant="outline"
-                className="border-orange-500 text-orange-600 hover:bg-orange-50"
-              >
-                Voltar
-              </Button>
-              <Button className="bg-orange-500 hover:bg-orange-600">
-                <UserPlus className="h-4 w-4 mr-2" />
-                Novo Usuário
-              </Button>
+            <Switch id="panels-enabled" checked={enabled} onCheckedChange={setEnabled} />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="plan">Plano</Label>
+            <Select value={plan} onValueChange={setPlan}>
+              <SelectTrigger id="plan"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {Object.entries(PLAN_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="expires">Válido até</Label>
+            <Input id="expires" type="date" value={expires} onChange={(e) => setExpires(e.target.value)} />
+            <div className="flex flex-wrap gap-2">
+              {[30, 90, 365].map((d) => (
+                <Button key={d} type="button" size="sm" variant="outline" onClick={() => setExpires(addDays(expires, d))}>
+                  +{d} dias
+                </Button>
+              ))}
+              <Button type="button" size="sm" variant="ghost" onClick={() => setExpires("")}>Sem validade</Button>
             </div>
           </div>
         </div>
 
-        {/* Estatísticas Rápidas */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Usuários</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{users.length}</div>
-              <p className="text-xs text-muted-foreground">+2 este mês</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Usuários Ativos</CardTitle>
-              <div className="h-4 w-4 bg-green-500 rounded-full"></div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {users.filter(u => u.status === 'active').length}
-              </div>
-              <p className="text-xs text-muted-foreground">67% do total</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Planos Premium</CardTitle>
-              <Crown className="h-4 w-4 text-orange-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {users.filter(u => u.plan === 'premium').length}
-              </div>
-              <p className="text-xs text-muted-foreground">33% dos usuários</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Administradores</CardTitle>
-              <div className="h-4 w-4 bg-red-500 rounded-full"></div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {users.filter(u => u.role === 'admin').length}
-              </div>
-              <p className="text-xs text-muted-foreground">Administradores</p>
-            </CardContent>
-          </Card>
-        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            {save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />}
+            Salvar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
-        {/* Filtros */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <input
-                    type="text"
-                    placeholder="Buscar por email..."
-                    className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filtrar
-                </Button>
-                <select className="px-3 py-2 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500">
-                  <option value="">Todos os Planos</option>
-                  <option value="free">Gratuito</option>
-                  <option value="professional">Profissional</option>
-                  <option value="premium">Premium</option>
-                </select>
-                <select className="px-3 py-2 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500">
-                  <option value="">Todos os Status</option>
-                  <option value="active">Ativo</option>
-                  <option value="inactive">Inativo</option>
-                  <option value="suspended">Suspenso</option>
-                </select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+const AdminUsers = () => {
+  const [search, setSearch] = useState("");
+  const [editing, setEditing] = useState<Marmitaria | null>(null);
+  const { data = [], isLoading, error } = useQuery({
+    queryKey: ["admin-marmitarias"],
+    queryFn: async () => {
+      const { data, error } = await db.rpc("admin_list_marmitarias");
+      if (error) throw error;
+      return data as Marmitaria[];
+    },
+  });
 
-        {/* Tabela de Usuários */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Lista de Usuários</CardTitle>
-            <CardDescription>
-              Visualize e gerencie todos os usuários do sistema
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Plano</TableHead>
-                  <TableHead>Função</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Data de Cadastro</TableHead>
-                  <TableHead>Último Acesso</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((userItem) => (
-                  <TableRow key={userItem.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center space-x-2">
-                        <Mail className="h-4 w-4 text-gray-400" />
-                        <span>{userItem.email}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{getPlanBadge(userItem.plan)}</TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={userItem.role === 'admin' ? 'default' : 'secondary'}
-                        className="capitalize"
-                      >
-                        {userItem.role === 'admin' && <Crown className="w-3 h-3 mr-1" />}
-                        {userItem.role}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(userItem.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-1 text-sm text-gray-600">
-                        <Calendar className="h-3 w-3" />
-                        {new Date(userItem.created_at).toLocaleDateString('pt-BR')}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-1 text-sm text-gray-600">
-                        <Calendar className="h-3 w-3" />
-                        {new Date(userItem.last_login).toLocaleDateString('pt-BR')}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => navigate(`/admin/users/${userItem.id}`)}
-                        >
-                          Editar
-                        </Button>
-                        {userItem.role !== 'admin' ? (
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handlePromoteToAdmin(userItem.id)}
-                          >
-                            Promover
-                          </Button>
-                        ) : (
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="text-orange-600 hover:text-orange-700"
-                            onClick={() => handleDemoteToUser(userItem.id)}
-                            disabled={userItem.id === user?.id}
-                          >
-                            Rebaixar
-                          </Button>
-                        )}
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="text-red-600 hover:text-red-700"
-                          onClick={async () => {
-                            if (!confirm('Tem certeza que deseja excluir este usuário?')) return;
-                            try {
-                              const { error } = await supabase
-                                .from('users')
-                                .delete()
-                                .eq('id', userItem.id);
-                              if (error) throw error;
-                              toast({
-                                title: 'Sucesso',
-                                description: 'Usuário excluído com sucesso.',
-                              });
-                              fetchUsers();
-                            } catch (error) {
-                              console.error('Erro ao excluir usuário:', error);
-                              toast({
-                                title: 'Erro',
-                                description: 'Não foi possível excluir o usuário.',
-                                variant: 'destructive',
-                              });
-                            }
-                          }}
-                          disabled={userItem.id === user?.id}
-                        >
-                          Excluir
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return q ? data.filter((m) => `${m.email} ${m.name}`.toLowerCase().includes(q)) : data;
+  }, [data, search]);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+        <Input
+          aria-label="Buscar marmitaria"
+          placeholder="Buscar por nome ou e-mail"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
       </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" aria-label="Carregando" /></div>
+      ) : error ? (
+        <p className="text-sm text-destructive">{(error as Error).message}</p>
+      ) : filtered.length === 0 ? (
+        <p className="py-12 text-center text-sm text-muted-foreground">Nenhuma marmitaria encontrada.</p>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {filtered.map((m) => {
+            const state = accessState(m);
+            return (
+              <li key={m.user_id} className="skeuo-raised flex flex-col gap-3 rounded-2xl p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 flex-col gap-1">
+                  <span className="truncate font-medium">{m.name || m.email}</span>
+                  {m.name && <span className="truncate text-sm text-muted-foreground">{m.email}</span>}
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <Badge variant="outline">{PLAN_LABELS[m.plan] ?? m.plan}</Badge>
+                    <Badge variant={state.variant}>{state.label}</Badge>
+                    {m.expires_at && <span>até {new Date(m.expires_at).toLocaleDateString("pt-BR")}</span>}
+                  </div>
+                </div>
+                {!m.is_admin && (
+                  <Button size="sm" variant="outline" onClick={() => setEditing(m)} className="shrink-0">
+                    Gerenciar plano
+                  </Button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {editing && <ManagePlanDialog key={editing.user_id} item={editing} onClose={() => setEditing(null)} />}
     </div>
   );
 };

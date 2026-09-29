@@ -8,7 +8,9 @@ import {
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Onboarding } from "@/components/onboarding/Onboarding";
+import { PlanExpiryBanner, PlanRenewalScreen } from "@/components/plan/PlanRenewal";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePlanAccess } from "@/hooks/usePlanAccess";
 import { db } from "@/lib/db";
 import { cn } from "@/lib/utils";
 
@@ -60,7 +62,6 @@ function useSections(): NavSection[] {
         { to: "/admin/orders", label: "Pedidos", icon: Truck },
         { to: "/admin/products", label: "Produtos", icon: Package },
         { to: "/admin/coupons", label: "Cupons", icon: Ticket },
-        { to: "/admin/mercadopago", label: "Mercado Pago", icon: CreditCard },
       ],
     });
   }
@@ -156,13 +157,16 @@ export function AdminShell({
         ?.onboarding_completed ?? false,
   });
 
-  if (user && isLoading) {
+  const access = usePlanAccess();
+
+  if (user && (isLoading || access.isLoading)) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-primary" aria-label="Carregando" />
       </div>
     );
   }
+  if (user && access.blocked) return <PlanRenewalScreen access={access} />;
   if (user && onboarded === false) return <Onboarding userId={user.id} isAdmin={isAdmin} />;
 
   return (
@@ -194,6 +198,7 @@ export function AdminShell({
             {actions && <div className="flex w-full items-center gap-2 overflow-x-auto sm:w-auto sm:shrink-0">{actions}</div>}
           </div>
         </header>
+        {access.expiringSoon && <PlanExpiryBanner access={access} />}
         <main className="flex-1 px-3 py-4 sm:py-6 lg:px-6">{children}</main>
       </div>
 
